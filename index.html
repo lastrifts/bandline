@@ -1450,9 +1450,9 @@ const Writing = (function(){
      newer learners aren't scared off by the full 40-minute Task 2. */
   function timesFor(t){
     if(!App.examMode && App.practiceMode==='easy'){
-      return t===1 ? {seconds:900, minWords:120} : {seconds:1800, minWords:200};
+      return t===1 ? {seconds:1200, minWords:120} : {seconds:1800, minWords:200};
     }
-    return t===1 ? {seconds:1200, minWords:150} : {seconds:2400, minWords:250};
+    return t===1 ? {seconds:1500, minWords:150} : {seconds:2400, minWords:250};
   }
 
   function init(){
