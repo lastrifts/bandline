@@ -699,7 +699,7 @@ const Profile = {
     try{ await window.storage.set(key, JSON.stringify(value), false); }catch(e){ console.error('profile set failed', e); }
   }
 };
-const LEVEL_LABELS = ['Easier','Standard','Harder'];
+const LEVEL_LABELS = ['Easy','Standard'];
 function clampLevel(n, max){ n = Number(n); if(isNaN(n)) n = 0; return Math.max(0, Math.min(max, n)); }
 function indexForLevel(list, level){
   const exact = list.findIndex(x=>x.level===level);
@@ -718,7 +718,7 @@ function showOnboarding(){
         const level = Number(btn.dataset.level);
         await Profile.set('profile:onboarded', true);
         await Profile.set('profile:level', level);
-        await Profile.set('profile:readingLevel', level);
+        await Profile.set('profile:readingLevel', Math.min(level,1));
         await Profile.set('profile:listeningLevel', Math.min(level,1));
         overlay.classList.add('hidden');
         resolve(level);
@@ -1149,7 +1149,7 @@ const READING_PASSAGES = [
     ]
   },
   {
-    id:'vertical-farming', title:'Growing Upwards: The Rise of Vertical Farming', timeLimit:1200, level:2,
+    id:'vertical-farming', title:'Growing Upwards: The Rise of Vertical Farming', timeLimit:1200, level:1,
     paragraphs:[
       "On the outskirts of several major cities, disused warehouses have been quietly transformed into some of the most productive farmland on the planet — without a single field in sight. Inside, crops are stacked in tall racks under pink-tinged LED lighting, their roots bathed not in soil but in a thin, nutrient-rich mist. This is vertical farming, an approach to agriculture that trades horizontal acreage for vertical space, and it is increasingly being pitched as a partial answer to the problem of feeding growing urban populations.",
       "The appeal is straightforward. A vertical farm can produce far more food per square metre of land than a conventional field, since growing trays can be stacked ten, twenty, or even forty layers high. Because the growing environment is fully enclosed, water use can be reduced dramatically compared with open-field agriculture, in some cases by more than ninety per cent, since moisture that would otherwise evaporate or run off is instead captured and recycled. Pesticides become largely unnecessary too, as the sealed environment keeps most pests out entirely.",
@@ -1261,7 +1261,7 @@ const Reading = (function(){
   let submitted = false;
 
   async function init(){
-    levelIdx = clampLevel(await Profile.get('profile:readingLevel', 1), 2);
+    levelIdx = clampLevel(await Profile.get('profile:readingLevel', 1), 1);
     idx = indexForLevel(READING_PASSAGES, levelIdx);
     const picker = document.getElementById('readingPassagePicker');
     picker.innerHTML = READING_PASSAGES.map((p,i)=>'<option value="'+i+'">'+(i+1)+'. '+p.title+' — '+LEVEL_LABELS[p.level]+'</option>').join('');
@@ -1275,7 +1275,7 @@ const Reading = (function(){
      specific difficulty, instead of waiting for the adaptive system to drift there. */
   function setLevel(level, opts){
     opts = opts || {};
-    levelIdx = clampLevel(level, 2);
+    levelIdx = clampLevel(level, 1);
     idx = indexForLevel(READING_PASSAGES, levelIdx);
     // Exam mode forces a level for the duration of the exam only — it must
     // never overwrite the learner's actual saved practice difficulty (see
@@ -1284,6 +1284,23 @@ const Reading = (function(){
     // toggle — this IS the learner's intended difficulty, so save it,
     // otherwise it reverts to the old saved level on next refresh.
     if(!App.examMode) Profile.set('profile:readingLevel', levelIdx);
+    const picker = document.getElementById('readingPassagePicker');
+    if(picker){
+      picker.value = String(idx);
+      picker.disabled = !!opts.disablePicker;
+    }
+    showPrep();
+  }
+
+  /* Used only by Exam mode, which walks through every passage in order
+     (state.readingSub 0, 1, 2...) regardless of difficulty tier. Kept
+     separate from setLevel() because Reading now only has 2 difficulty
+     tiers (Easier/Standard) but still has 3 passages — going by level
+     alone would show the same Standard passage twice and skip the third. */
+  function goToPassageIndex(i, opts){
+    opts = opts || {};
+    idx = clampLevel(i, READING_PASSAGES.length-1);
+    levelIdx = READING_PASSAGES[idx].level;
     const picker = document.getElementById('readingPassagePicker');
     if(picker){
       picker.value = String(idx);
@@ -1389,7 +1406,7 @@ const Reading = (function(){
     let levelNote = '';
     if(App.examMode){
       // Exam performance never changes the saved practice difficulty.
-    } else if(pct>=70 && levelIdx<2){
+    } else if(pct>=70 && levelIdx<1){
       levelIdx += 1;
       Profile.set('profile:readingLevel', levelIdx);
       levelNote = 'Nice work — next passage will be a little harder ('+LEVEL_LABELS[levelIdx]+').';
@@ -1415,7 +1432,7 @@ const Reading = (function(){
     Store.push('stats:reading', { date:todayISO(), title:p.title, score, total:p.questions.length, pct, timeSec:timer.elapsed() });
   }
 
-  return { init, setLevel };
+  return { init, setLevel, goToPassageIndex };
 })();
 
 /* =========================================================================
@@ -2332,7 +2349,6 @@ document.addEventListener('stats:updated', ()=>{
    done and the learner presses "Submit exam".
    ========================================================================= */
 const Exam = (function(){
-  const READING_LEVELS = [0,1,2];
   let state = null;
 
   function freshState(){
@@ -2366,7 +2382,7 @@ const Exam = (function(){
     if(step==='listening'){
       Listening.setLevel(1, {disablePicker:true});
     } else if(step==='reading'){
-      Reading.setLevel(READING_LEVELS[state.readingSub], {disablePicker:true});
+      Reading.goToPassageIndex(state.readingSub, {disablePicker:true});
     } else if(step==='writing'){
       document.querySelectorAll('#view-writing .tabbtn').forEach(b=>b.classList.add('examlock'));
       Writing.startExamTask(1);
@@ -2383,8 +2399,8 @@ const Exam = (function(){
       goToStep('reading');
     } else if(state.step==='reading'){
       state.readingSub += 1;
-      if(state.readingSub < READING_LEVELS.length){
-        Reading.setLevel(READING_LEVELS[state.readingSub], {disablePicker:true});
+      if(state.readingSub < READING_PASSAGES.length){
+        Reading.goToPassageIndex(state.readingSub, {disablePicker:true});
         lockNav('reading');
         renderHub();
       } else {
