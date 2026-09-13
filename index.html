@@ -755,10 +755,25 @@ const AI = (function(){
   /* Returns { ok:true, text } on success, or { ok:false, message } with a
      message that's actually useful to show the learner (bad key, no
      network, rate limited, etc.) rather than a raw stack trace. */
-  async function ask(system, user){
+  async function ask(system, user, opts){
+    opts = opts || {};
     const key = await getKey();
     if(!key) return { ok:false, message:'Add your OpenRouter API key first (AI feedback settings, bottom of the sidebar).' };
     try{
+      const body = {
+        model: MODEL,
+        messages: [
+          { role:'system', content: system },
+          { role:'user', content: user }
+        ],
+        max_tokens: 900
+      };
+      // Forces the model to return only a JSON object, with no surrounding
+      // prose or chain-of-thought. This also nudges OpenRouter's free-model
+      // auto-router (MODEL='openrouter/free') toward models that actually
+      // support structured output, instead of reasoning models that like to
+      // narrate their thinking before answering.
+      if(opts.jsonMode) body.response_format = { type:'json_object' };
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method:'POST',
         headers:{
@@ -769,14 +784,7 @@ const AI = (function(){
           'HTTP-Referer':'https://bandline.app',
           'X-Title':'Bandline'
         },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            { role:'system', content: system },
-            { role:'user', content: user }
-          ],
-          max_tokens: 900
-        })
+        body: JSON.stringify(body)
       });
       if(!res.ok){
         if(res.status===401) return { ok:false, message:'That OpenRouter API key was rejected. Double-check it in AI feedback settings.' };
@@ -793,23 +801,58 @@ const AI = (function(){
     }
   }
 
-  /* Asks for a strict JSON shape and parses it defensively, since a raw
-     band score + per-criterion notes render far better than a wall of
-     prose, but models occasionally wrap JSON in prose or code fences. */
+  /* Scans text for {...} objects using real, string-aware brace-matching
+     (so a stray brace inside the model's prose, or one inside a quoted
+     string value, can't derail it — the naive indexOf/lastIndexOf approach
+     this replaced broke exactly that way). Prefers the outermost, last
+     candidate that's actually valid JSON, since the real answer from a
+     "thinking out loud" model is almost always the final block. */
+  function extractJSON(text){
+    const spans = [];
+    for(let i=0;i<text.length;i++){
+      if(text[i] !== '{') continue;
+      let depth = 0, inStr = false, esc = false;
+      for(let j=i;j<text.length;j++){
+        const c = text[j];
+        if(inStr){
+          if(esc){ esc = false; }
+          else if(c==='\\'){ esc = true; }
+          else if(c==='"'){ inStr = false; }
+          continue;
+        }
+        if(c==='"'){ inStr = true; continue; }
+        if(c==='{') depth++;
+        else if(c==='}'){
+          depth--;
+          if(depth===0){ spans.push([i,j]); break; }
+        }
+      }
+    }
+    // Drop spans nested inside a larger span, so a "criteria" array item
+    // doesn't get preferred over its parent object.
+    const topLevel = spans.filter(([s,e]) => !spans.some(([s2,e2]) => s2<s && e2>=e));
+    for(let k=topLevel.length-1;k>=0;k--){
+      try{ return JSON.parse(text.slice(topLevel[k][0], topLevel[k][1]+1)); }catch(e){ /* try the next one */ }
+    }
+    for(let k=spans.length-1;k>=0;k--){
+      try{ return JSON.parse(text.slice(spans[k][0], spans[k][1]+1)); }catch(e){ /* try the next one */ }
+    }
+    return null;
+  }
+
+  /* Asks for a strict JSON shape and parses it defensively. Requests JSON
+     mode from the API so well-behaved models skip the prose entirely, but
+     some free models still wrap or precede it with commentary (or a whole
+     "thinking process") — extractJSON() digs the real object out of that. */
   async function askForJSON(system, user){
-    const r = await ask(system, user);
+    const r = await ask(system, user, { jsonMode:true });
     if(!r.ok) return r;
     let raw = r.text.trim();
     const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
     if(fence) raw = fence[1].trim();
-    const first = raw.indexOf('{');
-    const last = raw.lastIndexOf('}');
-    if(first>=0 && last>first) raw = raw.slice(first, last+1);
-    try{
-      return { ok:true, data: JSON.parse(raw) };
-    }catch(e){
-      return { ok:false, message:'Got a response but could not parse it. Raw output: '+r.text.slice(0,300) };
-    }
+    const data = extractJSON(raw);
+    if(data) return { ok:true, data };
+    return { ok:false, message:'Got a response but could not parse it as JSON — this can happen with free models. Try clicking again.' };
   }
 
   return { getKey, setKey, clearKey, hasKey, ask, askForJSON };
@@ -1535,7 +1578,7 @@ const Writing = (function(){
       aiBtn.addEventListener('click', async ()=>{
         aiBtn.disabled = true;
         aiResult.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>Scoring your response…</div>';
-        const system = 'You are an experienced IELTS Writing examiner. Assess the response strictly against the official IELTS Writing band descriptors (Task Achievement/Response, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy). Be honest and specific, not flattering. Reply with ONLY a single JSON object, no prose outside it, no markdown fences, matching exactly this shape: {"band": <number 1-9, one decimal place>, "summary": "<one or two sentence overall verdict>", "criteria": [{"name": "Task Achievement", "note": "<1-2 sentences, specific to this response>"}, {"name": "Coherence and Cohesion", "note": "..."}, {"name": "Lexical Resource", "note": "..."}, {"name": "Grammatical Range and Accuracy", "note": "..."}]}';
+        const system = 'You are an experienced IELTS Writing examiner. Assess the response strictly against the official IELTS Writing band descriptors (Task Achievement/Response, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy). Be honest and specific, not flattering. Do not think step by step or show any reasoning, planning, or analysis before answering. Reply with ONLY a single JSON object and nothing else — no prose before or after it, no markdown fences, no "thinking process" — matching exactly this shape: {"band": <number 1-9, one decimal place>, "summary": "<one or two sentence overall verdict>", "criteria": [{"name": "Task Achievement", "note": "<1-2 sentences, specific to this response>"}, {"name": "Coherence and Cohesion", "note": "..."}, {"name": "Lexical Resource", "note": "..."}, {"name": "Grammatical Range and Accuracy", "note": "..."}]}';
         const user = 'IELTS Writing Task '+task+'. Prompt: '+currentPrompt.title+' — '+currentPrompt.brief+'\n\nMinimum word count: '+currentMinWords+'. Candidate response ('+wordCount(essayText)+' words):\n\n'+essayText;
         const r = await AI.askForJSON(system, user);
         if(r.ok){
@@ -1832,7 +1875,7 @@ const Speaking = (function(){
         btn.disabled = true;
         const resEl = panel.querySelector('.ai-result');
         resEl.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>Scoring your answer…</div>';
-        const system = 'You are an experienced IELTS Speaking examiner. You are given only a speech-to-text transcript of a spoken answer, not the audio, so you cannot assess pronunciation or intonation — say so explicitly and focus only on Fluency and Coherence, Lexical Resource, and Grammatical Range and Accuracy. Be honest and specific, not flattering. Reply with ONLY a single JSON object, no prose outside it, no markdown fences, matching exactly this shape: {"band": <number 1-9, one decimal place>, "summary": "<one or two sentence overall verdict, noting pronunciation could not be assessed>", "criteria": [{"name":"Fluency and Coherence","note":"..."},{"name":"Lexical Resource","note":"..."},{"name":"Grammatical Range and Accuracy","note":"..."}]}';
+        const system = 'You are an experienced IELTS Speaking examiner. You are given only a speech-to-text transcript of a spoken answer, not the audio, so you cannot assess pronunciation or intonation — say so explicitly and focus only on Fluency and Coherence, Lexical Resource, and Grammatical Range and Accuracy. Be honest and specific, not flattering. Do not think step by step or show any reasoning, planning, or analysis before answering. Reply with ONLY a single JSON object and nothing else — no prose before or after it, no markdown fences, no "thinking process" — matching exactly this shape: {"band": <number 1-9, one decimal place>, "summary": "<one or two sentence overall verdict, noting pronunciation could not be assessed>", "criteria": [{"name":"Fluency and Coherence","note":"..."},{"name":"Lexical Resource","note":"..."},{"name":"Grammatical Range and Accuracy","note":"..."}]}';
         const user = 'IELTS Speaking '+label+'. Transcript of the candidate\'s spoken answer (auto-transcribed, may have minor errors):\n\n'+transcript;
         const r = await AI.askForJSON(system, user);
         resEl.innerHTML = r.ok ? renderAiFeedback(r.data) : '<p class="hint" style="color:var(--coral);">'+escapeHtml(r.message)+'</p>';
