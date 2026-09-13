@@ -1277,6 +1277,13 @@ const Reading = (function(){
     opts = opts || {};
     levelIdx = clampLevel(level, 2);
     idx = indexForLevel(READING_PASSAGES, levelIdx);
+    // Exam mode forces a level for the duration of the exam only — it must
+    // never overwrite the learner's actual saved practice difficulty (see
+    // the "Exam performance never changes the saved practice difficulty"
+    // note in submit() below). Everywhere else — namely the Easy/Standard
+    // toggle — this IS the learner's intended difficulty, so save it,
+    // otherwise it reverts to the old saved level on next refresh.
+    if(!App.examMode) Profile.set('profile:readingLevel', levelIdx);
     const picker = document.getElementById('readingPassagePicker');
     if(picker){
       picker.value = String(idx);
@@ -1620,6 +1627,10 @@ const Listening = (function(){
     opts = opts || {};
     levelIdx = clampLevel(level, 1);
     idx = indexForLevel(LISTENING_TRACKS, levelIdx);
+    // Same reasoning as Reading.setLevel() above: only persist outside
+    // Exam mode, so the forced exam level doesn't clobber the learner's
+    // actual saved practice difficulty.
+    if(!App.examMode) Profile.set('profile:listeningLevel', levelIdx);
     const picker = document.getElementById('listeningTrackPicker');
     if(picker){
       picker.value = String(idx);
