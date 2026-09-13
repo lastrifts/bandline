@@ -1423,7 +1423,7 @@ const Writing = (function(){
         'You get '+Math.round(seconds/60)+' minutes — once you start, the timer cannot be paused.',
         'Spend a couple of minutes planning your structure before you start typing; it pays off.',
         'Aim for at least '+minWords+' words and make sure you address every part of the prompt.',
-        'When time runs out your response is saved automatically, exactly as it stands.'
+        'When time runs out your response is submitted automatically, exactly as it stands.'
       ],
       startLabel: 'Start writing',
       onStart: ()=> render(seconds, minWords, set, p)
@@ -1459,7 +1459,7 @@ const Writing = (function(){
       '<div class="row" style="margin-top:10px;">' +
         '<span class="wordcount" id="writingWordCount">0 words</span>' +
         '<div class="spacer"></div>' +
-        '<button class="btn btn-primary" id="writingFinishBtn">Finish &amp; save</button>' +
+        '<button class="btn btn-primary" id="writingFinishBtn">'+(App.examMode ? 'Finish &amp; save' : 'Submit')+'</button>' +
       '</div>' +
       '<hr class="divider">' +
       '<h3 style="font-family:var(--font-serif); margin:0 0 4px;">Quick self-check</h3>' +
@@ -1509,10 +1509,22 @@ const Writing = (function(){
     const wc = wordCount(essay.value);
     const btn = document.getElementById('writingFinishBtn');
     btn.disabled = true;
-    btn.textContent = 'Saved';
+    essay.disabled = true;
     document.querySelectorAll('#view-writing .tabbtn').forEach(b=> b.disabled = false);
     unlockNav();
     Store.push('stats:writing', { date:todayISO(), task:'Task '+task, words:wc, timeSec:timer.elapsed() });
+
+    if(App.examMode){
+      btn.textContent = 'Saved';
+    } else {
+      btn.textContent = 'Submitted';
+      const restartBtn = document.createElement('button');
+      restartBtn.className = 'btn btn-ghost';
+      restartBtn.style.marginLeft = '8px';
+      restartBtn.textContent = 'Restart';
+      restartBtn.addEventListener('click', showPrep);
+      btn.insertAdjacentElement('afterend', restartBtn);
+    }
 
     const aiPanel = document.getElementById('writingAiPanel');
     if(aiPanel && !App.examMode){
