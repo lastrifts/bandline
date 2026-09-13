@@ -254,6 +254,19 @@
   .tabbtn.examlock{pointer-events:none; opacity:0.45;}
   .exam-results-table td:first-child{width:40%;}
 
+  /* ---------- Exam mode indicator ---------- */
+  .exam-mode-badge{
+    position:fixed; top:16px; right:24px; z-index:60;
+    display:none; align-items:center; gap:7px;
+    background:var(--coral); color:#fff;
+    padding:7px 14px; border-radius:20px;
+    font-size:0.76rem; font-weight:700; letter-spacing:0.02em;
+    box-shadow:0 6px 16px -4px rgba(180,67,47,0.45);
+  }
+  .exam-mode-badge .dot{width:6px; height:6px; border-radius:50%; background:#fff; animation:pulsedot 1.1s infinite;}
+  .exam-mode-badge.on{display:inline-flex;}
+  @media (max-width:760px){ .exam-mode-badge{ top:10px; right:10px; padding:6px 10px; font-size:0.68rem; } }
+
   /* ---------- Reading / Listening ---------- */
   .passage{font-family:var(--font-serif); font-size:1.02rem; line-height:1.75; color:#20304E;}
   .passage p{margin:0 0 14px;}
@@ -350,6 +363,8 @@
 </style>
 </head>
 <body>
+
+<div class="exam-mode-badge" id="examModeBadge"><span class="dot"></span>Exam mode — sections locked until final submission</div>
 
 <div class="modal-overlay hidden" id="onboardOverlay">
   <div class="modal-card card">
@@ -460,13 +475,13 @@
           <h3>IELTS exam section times</h3>
           <table class="examtimes-table">
             <tbody>
-              <tr><td>🎧 Listening</td><td>30 minutes</td></tr>
               <tr><td>📖 Reading</td><td>20 min × 3 passages = 60 min</td></tr>
               <tr><td>✍️ Writing</td><td>Task 1: 20 min + Task 2: 40 min</td></tr>
+              <tr><td>🎧 Listening</td><td>30 minutes</td></tr>
               <tr><td>🗣️ Speaking</td><td>~11–14 minutes</td></tr>
             </tbody>
           </table>
-          <p class="hint" style="margin-top:12px;">In <strong>Practice</strong>, each timer above is exactly what you'll see when you open that section — one passage, one task, one track at a time. <strong>Exam</strong> runs every part back to back at these same timings, with no way to leave until you finish and submit.</p>
+          <p class="hint" style="margin-top:12px;">In <strong>Practice</strong>, each timer above is exactly what you'll see when you open that section — one passage, one task, one track at a time. <strong>Exam</strong> runs every part back to back at these same timings, with no way to leave until you finish and submit, and no scores are shown until the very end.</p>
           <button class="btn btn-primary btn-sm" id="dashExamBtn" style="margin-top:14px;">Take the full exam</button>
         </div>
 
@@ -600,7 +615,7 @@
       <div class="pagehead">
         <div>
           <h1>Full exam</h1>
-          <p>All four sections, back to back, at standard difficulty — the same timings shown on your dashboard. Once you begin, you can't switch sections or leave until every part is finished and submitted.</p>
+          <p>All four sections, back to back, at standard difficulty — the same timings shown on your dashboard. Once you begin, you can't switch sections or leave until every part is finished and submitted, and no scores are revealed until then either.</p>
         </div>
       </div>
       <div class="contentwrap">
@@ -895,12 +910,14 @@ function aiSettingsModal(){
     await AI.setKey(input.value.trim());
     await refreshStatus();
     showToast('API key saved to this browser.');
+    if(typeof Exam !== 'undefined') Exam.renderHub();
   });
   document.getElementById('aiKeyClearBtn').addEventListener('click', async ()=>{
     await AI.clearKey();
     input.value = '';
     await refreshStatus();
     showToast('API key cleared.');
+    if(typeof Exam !== 'undefined') Exam.renderHub();
   });
 }
 
@@ -910,6 +927,12 @@ function aiSettingsModal(){
 const App = { lockedView: null, examMode: false, practiceMode: 'standard' };
 
 const VIEW_LABELS = { reading:'Reading', writing:'Writing', listening:'Listening', speaking:'Speaking', typing:'Typing test', exam:'Exam' };
+
+/* ---------- Exam mode badge ---------- */
+function setExamModeIndicator(on){
+  const badge = document.getElementById('examModeBadge');
+  if(badge) badge.classList.toggle('on', !!on);
+}
 
 /* ---------- Toasts (replaces the old static sidebar lock message) ---------- */
 function showToast(message){
@@ -1323,7 +1346,7 @@ const Reading = (function(){
         'Skim the passage first for its overall structure, then hunt for specific answers rather than reading word-for-word.',
         'Answer every question, even a guess — there is no penalty for a wrong answer.',
         'If time runs out, whatever you have answered is submitted automatically.',
-        'The difficulty adjusts automatically based on your scores — score well and the next passage gets harder, struggle and it eases off. You can also pick any passage yourself from the dropdown above.'
+        App.examMode ? 'This is part of the full exam — your score will only be revealed at the end, after every section is submitted.' : 'The difficulty adjusts automatically based on your scores — score well and the next passage gets harder, struggle and it eases off. You can also pick any passage yourself from the dropdown above.'
       ],
       startLabel: 'Start passage',
       onStart: load
@@ -1392,13 +1415,17 @@ const Reading = (function(){
         correct = userVal.toLowerCase() === String(q.answer).toLowerCase();
       }
       if(correct) score++;
-      block.classList.add(correct?'correct':'incorrect');
-      if(!correct){
-        const answerText = q.type==='mcq' ? q.options[q.answer] : q.answer;
-        const note = document.createElement('div');
-        note.className = 'incorrectans';
-        note.textContent = 'Correct answer: ' + answerText;
-        block.appendChild(note);
+      // In exam mode, don't reveal which answers were right or wrong —
+      // scores stay hidden until the whole exam is submitted.
+      if(!App.examMode){
+        block.classList.add(correct?'correct':'incorrect');
+        if(!correct){
+          const answerText = q.type==='mcq' ? q.options[q.answer] : q.answer;
+          const note = document.createElement('div');
+          note.className = 'incorrectans';
+          note.textContent = 'Correct answer: ' + answerText;
+          block.appendChild(note);
+        }
       }
       block.querySelectorAll('input').forEach(inp=>inp.disabled = true);
     });
@@ -1420,11 +1447,17 @@ const Reading = (function(){
       const picker = document.getElementById('readingPassagePicker');
       if(picker) picker.value = String(idx);
     }
-    document.getElementById('readingResult').innerHTML =
-      '<div class="card"><div class="resultbig"><span class="n">'+score+'</span><span>/ '+p.questions.length+' correct ('+pct+'%)</span></div>' +
-      '<p class="hint" style="margin-top:8px;">Informal practice score, not an official IELTS band.</p>' +
-      (levelNote ? '<p class="hint" style="margin-top:4px;">'+levelNote+'</p>' : '') +
-      '</div>';
+    if(App.examMode){
+      document.getElementById('readingResult').innerHTML =
+        '<div class="card"><p style="margin:0; font-weight:600;">Answers submitted.</p>' +
+        '<p class="hint" style="margin-top:6px;">Your score for this passage will be revealed with the rest of your results once you finish and submit the full exam.</p></div>';
+    } else {
+      document.getElementById('readingResult').innerHTML =
+        '<div class="card"><div class="resultbig"><span class="n">'+score+'</span><span>/ '+p.questions.length+' correct ('+pct+'%)</span></div>' +
+        '<p class="hint" style="margin-top:8px;">Informal practice score, not an official IELTS band.</p>' +
+        (levelNote ? '<p class="hint" style="margin-top:4px;">'+levelNote+'</p>' : '') +
+        '</div>';
+    }
     document.getElementById('readingSubmitBtn').disabled = true;
     document.getElementById('readingPassagePicker').disabled = false;
     unlockNav();
@@ -1490,8 +1523,9 @@ const Writing = (function(){
         'You get '+Math.round(seconds/60)+' minutes — once you start, the timer cannot be paused.',
         'Spend a couple of minutes planning your structure before you start typing; it pays off.',
         'Aim for at least '+minWords+' words and make sure you address every part of the prompt.',
-        'When time runs out your response is submitted automatically, exactly as it stands.'
-      ],
+        'When time runs out your response is submitted automatically, exactly as it stands.',
+        App.examMode ? 'This is part of the full exam — your AI-graded band for this task will only be revealed at the end, once every section is submitted.' : null
+      ].filter(Boolean),
       startLabel: 'Start writing',
       onStart: ()=> render(seconds, minWords, set, p)
     });
@@ -1570,19 +1604,37 @@ const Writing = (function(){
     if(el) el.classList.toggle('met', !!met);
   }
 
+  /* Builds the same grading prompt used by the manual "Get AI feedback"
+     button. Shared so exam-mode auto-grading and practice-mode on-demand
+     grading always score identically. */
+  function buildGradingMessages(taskNum, prompt, minWords, essayText){
+    const system = 'You are an experienced IELTS Writing examiner. Assess the response strictly against the official IELTS Writing band descriptors (Task Achievement/Response, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy). Be honest and specific, not flattering. Do not think step by step or show any reasoning, planning, or analysis before answering. Reply with ONLY a single JSON object and nothing else — no prose before or after it, no markdown fences, no "thinking process" — matching exactly this shape: {"band": <number 1-9, one decimal place>, "summary": "<one or two sentence overall verdict>", "criteria": [{"name": "Task Achievement", "note": "<1-2 sentences, specific to this response>"}, {"name": "Coherence and Cohesion", "note": "..."}, {"name": "Lexical Resource", "note": "..."}, {"name": "Grammatical Range and Accuracy", "note": "..."}]}';
+    const user = 'IELTS Writing Task '+taskNum+'. Prompt: '+prompt.title+' — '+prompt.brief+'\n\nMinimum word count: '+minWords+'. Candidate response ('+wordCount(essayText)+' words):\n\n'+essayText;
+    return { system, user };
+  }
+
   function finish(){
     timer.pause();
     const essay = document.getElementById('writingEssay');
-    const wc = wordCount(essay.value);
+    const essayText = essay.value;
+    const wc = wordCount(essayText);
     const btn = document.getElementById('writingFinishBtn');
     btn.disabled = true;
     essay.disabled = true;
     document.querySelectorAll('#view-writing .tabbtn').forEach(b=> b.disabled = false);
     unlockNav();
-    Store.push('stats:writing', { date:todayISO(), task:'Task '+task, words:wc, timeSec:timer.elapsed() });
+    const entry = { date:todayISO(), task:'Task '+task, words:wc, timeSec:timer.elapsed() };
+    Store.push('stats:writing', entry);
 
     if(App.examMode){
       btn.textContent = 'Saved';
+      // Grade silently in the background so the band is ready by the time
+      // the exam summary is shown — nothing is revealed on screen now.
+      const { system, user } = buildGradingMessages(task, currentPrompt, currentMinWords, essayText);
+      AI.askForJSON(system, user).then(r=>{
+        if(r.ok){ entry.band = r.data.band; entry.aiSummary = r.data.summary; }
+        else { entry.bandError = r.message; }
+      });
     } else {
       btn.textContent = 'Submitted';
       const restartBtn = document.createElement('button');
@@ -1596,14 +1648,12 @@ const Writing = (function(){
     const aiPanel = document.getElementById('writingAiPanel');
     if(aiPanel && !App.examMode){
       aiPanel.style.display = 'block';
-      const essayText = essay.value;
       const aiBtn = document.getElementById('writingAiBtn');
       const aiResult = document.getElementById('writingAiResult');
       aiBtn.addEventListener('click', async ()=>{
         aiBtn.disabled = true;
         aiResult.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>Scoring your response…</div>';
-        const system = 'You are an experienced IELTS Writing examiner. Assess the response strictly against the official IELTS Writing band descriptors (Task Achievement/Response, Coherence and Cohesion, Lexical Resource, Grammatical Range and Accuracy). Be honest and specific, not flattering. Do not think step by step or show any reasoning, planning, or analysis before answering. Reply with ONLY a single JSON object and nothing else — no prose before or after it, no markdown fences, no "thinking process" — matching exactly this shape: {"band": <number 1-9, one decimal place>, "summary": "<one or two sentence overall verdict>", "criteria": [{"name": "Task Achievement", "note": "<1-2 sentences, specific to this response>"}, {"name": "Coherence and Cohesion", "note": "..."}, {"name": "Lexical Resource", "note": "..."}, {"name": "Grammatical Range and Accuracy", "note": "..."}]}';
-        const user = 'IELTS Writing Task '+task+'. Prompt: '+currentPrompt.title+' — '+currentPrompt.brief+'\n\nMinimum word count: '+currentMinWords+'. Candidate response ('+wordCount(essayText)+' words):\n\n'+essayText;
+        const { system, user } = buildGradingMessages(task, currentPrompt, currentMinWords, essayText);
         const r = await AI.askForJSON(system, user);
         if(r.ok){
           aiResult.innerHTML = renderAiFeedback(r.data);
@@ -1670,8 +1720,9 @@ const Listening = (function(){
         'The audio plays through your browser\'s spoken-voice engine, once only — there is no pause, rewind or replay button, just like the real test.',
         'Read the questions below the moment they appear and listen for the answers as the audio plays.',
         'Write down an answer even if you are unsure — partial answers can still be graded once the recording ends.',
-        window.speechSynthesis ? 'Make sure your volume is on before you press start.' : 'Your browser does not support spoken audio — try Chrome, Edge or Safari instead.'
-      ],
+        window.speechSynthesis ? 'Make sure your volume is on before you press start.' : 'Your browser does not support spoken audio — try Chrome, Edge or Safari instead.',
+        App.examMode ? 'This is part of the full exam — your score will only be revealed at the end, after every section is submitted.' : null
+      ].filter(Boolean),
       startLabel: 'Start listening',
       onStart: load
     });
@@ -1769,13 +1820,16 @@ const Listening = (function(){
         correct = userVal.toLowerCase() === String(q.answer).toLowerCase();
       }
       if(correct) score++;
-      block.classList.add(correct?'correct':'incorrect');
-      if(!correct){
-        const answerText = q.type==='mcq' ? q.options[q.answer] : q.answer;
-        const note = document.createElement('div');
-        note.className='incorrectans';
-        note.textContent = 'Correct answer: ' + answerText;
-        block.appendChild(note);
+      // Same rule as Reading.submit(): hide correctness during the exam.
+      if(!App.examMode){
+        block.classList.add(correct?'correct':'incorrect');
+        if(!correct){
+          const answerText = q.type==='mcq' ? q.options[q.answer] : q.answer;
+          const note = document.createElement('div');
+          note.className='incorrectans';
+          note.textContent = 'Correct answer: ' + answerText;
+          block.appendChild(note);
+        }
       }
       block.querySelectorAll('input').forEach(inp=>inp.disabled=true);
     });
@@ -1797,11 +1851,17 @@ const Listening = (function(){
       const picker = document.getElementById('listeningTrackPicker');
       if(picker) picker.value = String(idx);
     }
-    document.getElementById('listeningResult').innerHTML =
-      '<div class="card"><div class="resultbig"><span class="n">'+score+'</span><span>/ '+t.questions.length+' correct ('+pct+'%)</span></div>' +
-      '<p class="hint" style="margin-top:8px;">Informal practice score, not an official IELTS band.</p>' +
-      (levelNote ? '<p class="hint" style="margin-top:4px;">'+levelNote+'</p>' : '') +
-      '</div>';
+    if(App.examMode){
+      document.getElementById('listeningResult').innerHTML =
+        '<div class="card"><p style="margin:0; font-weight:600;">Answers submitted.</p>' +
+        '<p class="hint" style="margin-top:6px;">Your score for this section will be revealed with the rest of your results once you finish and submit the full exam.</p></div>';
+    } else {
+      document.getElementById('listeningResult').innerHTML =
+        '<div class="card"><div class="resultbig"><span class="n">'+score+'</span><span>/ '+t.questions.length+' correct ('+pct+'%)</span></div>' +
+        '<p class="hint" style="margin-top:8px;">Informal practice score, not an official IELTS band.</p>' +
+        (levelNote ? '<p class="hint" style="margin-top:4px;">'+levelNote+'</p>' : '') +
+        '</div>';
+    }
     document.getElementById('listeningSubmitBtn').disabled = true;
     document.getElementById('listeningTrackPicker').disabled = false;
     unlockNav();
@@ -1881,7 +1941,9 @@ const Speaking = (function(){
   }
 
   /* Appends a transcript + "Get AI feedback" block under a finished
-     recording. Shared by Parts 1, 2 and 3. */
+     recording. Shared by Parts 1, 2 and 3. Not used in exam mode, since
+     Speaking results are shown as recorded duration only in the final
+     summary, not an AI band. */
   function attachSpeakingFeedback(container, transcript, label){
     const old = container.querySelector('.ai-panel');
     if(old) old.remove();
@@ -1968,7 +2030,7 @@ const Speaking = (function(){
     if(part===1){
       body.innerHTML =
         (App.examMode ?
-          '<div class="row" style="margin-bottom:14px;"><span class="timer" id="speakingPartTimer">05:00</span><span class="runninglabel">Answer as many as you like, then finish this part when ready.</span></div>'
+          '<div class="row" style="margin-bottom:14px;"><span class="timer" id="speakingPartTimer">05:00</span><span class="runninglabel">Answer as many as you like, then finish this part when ready. Nothing is scored on screen during the exam.</span></div>'
           : '<div class="banner banner-info">In the real exam, Part 1 lasts about 4–5 minutes in total — the examiner asks several short questions like these.</div>') +
         SPEAKING_CONTENT[1].map((q,i)=>
         '<div class="speaking-q">' +
@@ -2053,7 +2115,7 @@ const Speaking = (function(){
             if(recorder && recorder.state==='recording') recorder.stop();
             if(transcriber) transcriber.stop();
             tag.textContent = 'Finished';
-            statusEl.textContent = 'Nice work — session saved.';
+            statusEl.textContent = App.examMode ? 'Recorded — saved for the exam summary.' : 'Nice work — session saved.';
             startBtn.disabled = false;
             startBtn.textContent = 'Practice again';
             document.querySelectorAll('#view-speaking .tabbtn').forEach(b=> b.disabled = App.examMode);
@@ -2068,7 +2130,7 @@ const Speaking = (function(){
     } else {
       body.innerHTML =
         (App.examMode ?
-          '<div class="row" style="margin-bottom:14px;"><span class="timer" id="speakingPartTimer">05:00</span><span class="runninglabel">Answer as many as you like, then finish this part when ready.</span></div>'
+          '<div class="row" style="margin-bottom:14px;"><span class="timer" id="speakingPartTimer">05:00</span><span class="runninglabel">Answer as many as you like, then finish this part when ready. Nothing is scored on screen during the exam.</span></div>'
           : '<div class="banner banner-info">In the real exam, Part 3 lasts about 4–5 minutes — a two-way discussion that builds on the Part 2 topic.</div>') +
         SPEAKING_CONTENT[3].map((q,i)=>
         '<div class="speaking-q">' +
@@ -2342,11 +2404,14 @@ document.addEventListener('stats:updated', ()=>{
 });
 
 /* =========================================================================
-   EXAM MODULE — runs Listening, Reading (all 3 passages), Writing (both
-   tasks) and Speaking (all 3 parts) back to back at Standard difficulty.
-   The nav rail stays locked to whichever section is currently running —
-   see the App.examMode branch inside unlockNav() — until every part is
-   done and the learner presses "Submit exam".
+   EXAM MODULE — runs Reading (all 3 passages), Writing (both tasks),
+   Listening and Speaking (all 3 parts) back to back at Standard
+   difficulty, in that order. The nav rail stays locked to whichever
+   section is currently running — see the App.examMode branch inside
+   unlockNav() — until every part is done and the learner presses
+   "Submit exam". No scores of any kind are shown on screen while the
+   exam is active; everything is revealed only on the final summary
+   screen after submission.
    ========================================================================= */
 const Exam = (function(){
   let state = null;
@@ -2369,23 +2434,34 @@ const Exam = (function(){
   }
 
   async function begin(){
+    // Writing responses in the exam are graded automatically by the AI
+    // once each task is finished, so there's no way to produce a Writing
+    // result on the final summary without a working API key. Block the
+    // exam from starting at all until one is saved.
+    const hasKey = await AI.hasKey();
+    if(!hasKey){
+      showToast('Add an OpenRouter API key first — Writing is graded by AI, so the exam needs one to run.');
+      renderHub();
+      return;
+    }
     state = freshState();
     state.active = true;
     App.examMode = true;
+    setExamModeIndicator(true);
     window.addEventListener('beforeunload', beforeUnload);
-    await goToStep('listening');
+    await goToStep('reading');
   }
 
   async function goToStep(step){
     state.step = step;
     forceSwitch(step);
-    if(step==='listening'){
-      Listening.setLevel(1, {disablePicker:true});
-    } else if(step==='reading'){
+    if(step==='reading'){
       Reading.goToPassageIndex(state.readingSub, {disablePicker:true});
     } else if(step==='writing'){
       document.querySelectorAll('#view-writing .tabbtn').forEach(b=>b.classList.add('examlock'));
       Writing.startExamTask(1);
+    } else if(step==='listening'){
+      Listening.setLevel(1, {disablePicker:true});
     } else if(step==='speaking'){
       document.querySelectorAll('#view-speaking .tabbtn').forEach(b=>b.classList.add('examlock'));
       Speaking.goToExamPart(1);
@@ -2395,9 +2471,7 @@ const Exam = (function(){
 
   function sectionFinished(){
     if(!state.active) return;
-    if(state.step==='listening'){
-      goToStep('reading');
-    } else if(state.step==='reading'){
+    if(state.step==='reading'){
       state.readingSub += 1;
       if(state.readingSub < READING_PASSAGES.length){
         Reading.goToPassageIndex(state.readingSub, {disablePicker:true});
@@ -2413,8 +2487,10 @@ const Exam = (function(){
         lockNav('writing');
         renderHub();
       } else {
-        goToStep('speaking');
+        goToStep('listening');
       }
+    } else if(state.step==='listening'){
+      goToStep('speaking');
     } else if(state.step==='speaking'){
       state.speakingSub += 1;
       if(state.speakingSub < 3){
@@ -2447,57 +2523,65 @@ const Exam = (function(){
 
   function submit(){
     const r = state.results;
+    const writingBands = r.writing.map(w=>w && typeof w.band==='number' ? w.band : null).filter(b=>b!==null);
     Store.push('stats:exam', {
       date: todayISO(),
       listeningPct: r.listening ? r.listening.pct : null,
       readingAvgPct: r.reading.length ? Math.round(r.reading.reduce((s,x)=>s+(x?x.pct:0),0)/r.reading.length) : null,
       writingWords: r.writing.reduce((s,x)=>s+(x?x.words:0),0),
+      writingAvgBand: writingBands.length ? Math.round((writingBands.reduce((s,b)=>s+b,0)/writingBands.length)*10)/10 : null,
       speakingSec: r.speaking.reduce((s,x)=>s+(x?x.durationSec:0),0)
     });
     state.submitted = true;
     state.active = false;
     App.examMode = false;
+    setExamModeIndicator(false);
     window.removeEventListener('beforeunload', beforeUnload);
     clearNavLock();
     switchView('exam');
     renderHub();
   }
 
-  function renderHub(){
+  async function renderHub(){
     const el = document.getElementById('examHubBody');
     if(!el) return;
     if(state.submitted){ el.innerHTML = renderSummary(); return; }
     if(state.active){ el.innerHTML = renderInProgress(); return; }
-    el.innerHTML = renderIntro();
+    el.innerHTML = await renderIntro();
   }
 
-  function renderIntro(){
+  async function renderIntro(){
+    const hasKey = await AI.hasKey();
     return '<div class="card prepcard">' +
       '<h2>Ready for a full mock exam?</h2>' +
       '<p class="prepmeta">Standard difficulty · roughly 2 hours 15 minutes, start to finish</p>' +
       '<ul class="preptips">' +
-        '<li>'+ICO.check+'<span>Listening — one 30-minute test, audio plays once.</span></li>' +
         '<li>'+ICO.check+'<span>Reading — 3 passages, 20 minutes each (60 minutes total), easiest to hardest.</span></li>' +
-        '<li>'+ICO.check+'<span>Writing — Task 1 (20 minutes), then Task 2 (40 minutes).</span></li>' +
+        '<li>'+ICO.check+'<span>Writing — Task 1 (20 minutes), then Task 2 (40 minutes), auto-graded by AI.</span></li>' +
+        '<li>'+ICO.check+'<span>Listening — one 30-minute test, audio plays once.</span></li>' +
         '<li>'+ICO.check+'<span>Speaking — Parts 1, 2 and 3, about 11–14 minutes altogether.</span></li>' +
         '<li>'+ICO.check+'<span>Once you begin, the nav locks to the current section — you can\'t skip ahead, go back, or leave until every part is done and you press Submit.</span></li>' +
+        '<li>'+ICO.check+'<span>No scores, bands or correct/incorrect answers are shown while the exam is running — everything is revealed together at the end.</span></li>' +
       '</ul>' +
-      '<div class="prepstart-row"><button class="btn btn-primary" id="examBeginBtn">Begin exam</button></div>' +
+      (hasKey
+        ? '<div class="prepstart-row"><button class="btn btn-primary" id="examBeginBtn">Begin exam</button></div>'
+        : '<div class="banner banner-warn" style="margin-top:18px; margin-bottom:0;">You\'ll need an OpenRouter API key before you can start — Writing is graded automatically by AI during the exam, so there\'s no way to score it without one. <button class="btn btn-ghost btn-sm" id="examAddKeyBtn" style="margin-left:4px;">Add API key</button></div>'
+      ) +
     '</div>';
   }
 
   function renderInProgress(){
     const items = [
-      {label:'Listening', done: state.step!=='listening'},
-      {label:'Reading — passage '+Math.min(state.readingSub+1,3)+' of 3', done: state.step!=='listening' && state.step!=='reading'},
-      {label:'Writing — task '+Math.min(state.writingSub+1,2)+' of 2', done: state.step==='speaking' || state.step==='exam'},
+      {label:'Reading — passage '+Math.min(state.readingSub+1,3)+' of 3', done: state.step!=='reading'},
+      {label:'Writing — task '+Math.min(state.writingSub+1,2)+' of 2', done: state.step!=='reading' && state.step!=='writing'},
+      {label:'Listening', done: state.step==='speaking' || state.step==='exam'},
       {label:'Speaking — part '+Math.min(state.speakingSub+1,3)+' of 3', done: state.step==='exam'}
     ];
     const allDone = items.every(i=>i.done);
     const currentLabel = VIEW_LABELS[state.step] || '';
     return '<div class="card">' +
       '<h2 style="font-family:var(--font-serif); font-size:1.15rem; margin:0 0 4px;">Exam in progress</h2>' +
-      '<p class="hint" style="margin:0 0 4px;">'+(allDone ? 'All sections complete — review below, then submit when ready.' : 'Currently on: <strong>'+currentLabel+'</strong>.')+'</p>' +
+      '<p class="hint" style="margin:0 0 4px;">'+(allDone ? 'All sections complete — nothing is scored yet. Submit below to reveal your results.' : 'Currently on: <strong>'+currentLabel+'</strong>. No scores are shown until the whole exam is submitted.')+'</p>' +
       '<div class="checklist examhub-check">' + items.map(i=>'<div class="checkitem'+(i.done?' met':'')+'"><span class="dot"></span><span>'+i.label+(i.done?' — done':'')+'</span></div>').join('') + '</div>' +
       '<div class="prepstart-row">' +
         (allDone
@@ -2512,14 +2596,18 @@ const Exam = (function(){
     const listeningPct = r.listening ? r.listening.pct+'%' : '—';
     const readingPct = r.reading.length ? Math.round(r.reading.reduce((s,x)=>s+(x?x.pct:0),0)/r.reading.length)+'%' : '—';
     const writingWords = r.writing.reduce((s,x)=>s+(x?x.words:0),0);
+    const writingBands = r.writing.map(w=>w && typeof w.band==='number' ? w.band : null);
+    const writingBandCell = writingBands.some(b=>b!==null)
+      ? writingBands.map((b,i)=> 'Task '+(i+1)+': '+(b!==null ? 'band '+b : (r.writing[i] && r.writing[i].bandError ? 'not graded' : '—'))).join(' · ')
+      : 'not graded';
     const speakingSec = r.speaking.reduce((s,x)=>s+(x?x.durationSec:0),0);
     return '<div class="card">' +
       '<h2 style="font-family:var(--font-serif); font-size:1.15rem; margin:0 0 4px;">Exam complete</h2>' +
       '<p class="hint" style="margin:0 0 16px;">Informal practice results, saved to your dashboard — not an official IELTS score.</p>' +
       '<table class="examtimes-table exam-results-table"><tbody>' +
-        '<tr><td>🎧 Listening</td><td>'+listeningPct+'</td></tr>' +
         '<tr><td>📖 Reading (average of 3)</td><td>'+readingPct+'</td></tr>' +
-        '<tr><td>✍️ Writing</td><td>'+writingWords+' words total</td></tr>' +
+        '<tr><td>✍️ Writing</td><td>'+writingWords+' words total · '+writingBandCell+'</td></tr>' +
+        '<tr><td>🎧 Listening</td><td>'+listeningPct+'</td></tr>' +
         '<tr><td>🗣️ Speaking</td><td>'+speakingSec+'s recorded</td></tr>' +
       '</tbody></table>' +
       '<div class="prepstart-row"><button class="btn btn-primary" id="examRestartBtn">Start a new mock exam</button></div>' +
@@ -2528,6 +2616,7 @@ const Exam = (function(){
 
   document.getElementById('view-exam').addEventListener('click', (e)=>{
     if(e.target.closest('#examBeginBtn')) begin();
+    else if(e.target.closest('#examAddKeyBtn')) document.getElementById('aiSettingsBtn').click();
     else if(e.target.closest('#examSubmitBtn')) submit();
     else if(e.target.closest('#examResumeBtn')) forceSwitch(state.step);
     else if(e.target.closest('#examRestartBtn')){ state = freshState(); renderHub(); }
