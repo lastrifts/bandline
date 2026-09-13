@@ -2514,9 +2514,19 @@ const Exam = (function(){
    Writing and Speaking practice. Doesn't affect Exam mode, which is always
    Standard.
    ========================================================================= */
-async function initPracticeToggle(){
+/* Loads the saved Easy/Standard preference and reflects it on the toggle
+   buttons. Split out from wirePracticeToggle() and called BEFORE the
+   practice sections render (see INIT below) — otherwise Writing/Speaking
+   render their first screen using App.practiceMode's default ('standard')
+   before this had a chance to load the real saved value, which is why the
+   toggle used to show "Easy" while the sections still said "Standard"
+   right after a refresh. */
+async function loadPracticeMode(){
   App.practiceMode = await Profile.get('profile:practiceMode', 'standard');
   document.querySelectorAll('.pmode-btn').forEach(b=> b.classList.toggle('active', b.dataset.mode===App.practiceMode));
+}
+
+function wirePracticeToggle(){
   document.getElementById('pmodeToggle').addEventListener('click', async (e)=>{
     const btn = e.target.closest('.pmode-btn');
     if(!btn || btn.classList.contains('active')) return;
@@ -2542,12 +2552,13 @@ document.getElementById('dashExamBtn').addEventListener('click', ()=> switchView
 window.addEventListener('DOMContentLoaded', async ()=>{
   const onboarded = await Profile.get('profile:onboarded', false);
   if(!onboarded) await showOnboarding();
+  await loadPracticeMode();
   await Reading.init();
   Writing.init();
   await Listening.init();
   Speaking.init();
   Typing.init();
-  await initPracticeToggle();
+  wirePracticeToggle();
   aiSettingsModal();
   Dashboard.render();
 });
