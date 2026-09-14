@@ -223,13 +223,18 @@
   .activity-icon{width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--jade-tint); color:var(--jade-dark);}
   .activity-icon svg{width:15px;height:15px;}
   .activity-meta{color:var(--ink-faint); font-size:0.76rem;}
-  .badge-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
-  .seal{width:62px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; animation:sealpop .4s var(--ease) both;}
-  .seal-icon{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--jade-tint); color:var(--jade-dark); border:1px solid var(--line);}
-  .seal-icon svg{width:18px;height:18px;}
-  .seal span{font-size:0.68rem; line-height:1.15; color:var(--ink-soft);}
-  .seal.locked{opacity:.32; filter:grayscale(1);}
-  @keyframes sealpop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+  .badge-row{display:flex; gap:10px; flex-wrap:wrap;}
+  .seal{width:56px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; animation:sealpop .4s var(--ease) both;}
+  .seal:nth-child(1){animation-delay:.05s;}
+  .seal:nth-child(2){animation-delay:.12s;}
+  .seal:nth-child(3){animation-delay:.19s;}
+  .seal:nth-child(4){animation-delay:.26s;}
+  @keyframes sealpop{from{opacity:0; transform:scale(0.7);} to{opacity:1; transform:scale(1);}}
+  .seal-icon{width:44px; height:44px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #E9C77A, var(--gold) 70%); display:flex; align-items:center; justify-content:center; color:#5A3C0C; box-shadow:0 3px 8px rgba(201,138,45,0.35);}
+  .seal-icon svg{width:20px;height:20px;}
+  .seal.locked .seal-icon{background:#E4E8DF; color:#AEB6A5; box-shadow:none;}
+  .seal span{font-size:0.62rem; color:var(--ink-soft); line-height:1.2;}
+  .chartbox{height:210px;}
   .empty-state{color:var(--ink-faint); font-size:0.86rem; padding:10px 0;}
   .disclaimer{max-width:900px; margin-top:8px; font-size:0.74rem; color:var(--ink-faint);}
   .examtimes-table{width:100%; border-collapse:collapse; font-size:0.9rem;}
@@ -450,7 +455,7 @@
       <div class="pagehead">
         <div>
           <h1>Your practice, at a glance</h1>
-          <p>Bandline tracks your practice sessions so you can see your progress and keep your routine going.</p>
+          <p>Bandline tracks every reading, writing, listening, speaking and typing session so you can see where to focus next.</p>
         </div>
       </div>
       <div class="bento" id="dashboardGrid">
@@ -479,6 +484,29 @@
         <div class="b-tile stat">
           <div class="num" id="statTypingBest">—</div>
           <div class="lbl">Best typing speed (WPM)</div>
+        </div>
+
+        <div class="b-tile b-wide">
+          <h3>IELTS exam section times</h3>
+          <table class="examtimes-table">
+            <tbody>
+              <tr><td>📖 Reading</td><td>20 min × 3 passages = 60 min</td></tr>
+              <tr><td>✍️ Writing</td><td>Task 1: 20 min + Task 2: 40 min</td></tr>
+              <tr><td>🎧 Listening</td><td>30 minutes</td></tr>
+              <tr><td>🗣️ Speaking</td><td>~11–14 minutes</td></tr>
+            </tbody>
+          </table>
+          <p class="hint" style="margin-top:12px;">In <strong>Practice</strong>, each timer above is exactly what you'll see when you open that section — one passage, one task, one track at a time. <strong>Exam</strong> runs every part back to back at these same timings, with no way to leave until you finish and submit, and no scores are shown until the very end.</p>
+          <button class="btn btn-primary btn-sm" id="dashExamBtn" style="margin-top:14px;">Take the full exam</button>
+        </div>
+
+        <div class="b-tile b-half">
+          <h3>Typing speed over time</h3>
+          <div class="chartbox"><canvas id="typingChart"></canvas></div>
+        </div>
+        <div class="b-tile b-half">
+          <h3>Practice balance</h3>
+          <div class="chartbox"><canvas id="balanceChart"></canvas></div>
         </div>
 
         <div class="b-tile b-half">
@@ -2461,7 +2489,7 @@ const Typing = (function(){
    DASHBOARD MODULE
    ========================================================================= */
 const Dashboard = (function(){
-
+  let typingChart=null, balanceChart=null;
 
   function avg(arr, key){
     if(!arr.length) return null;
@@ -2542,6 +2570,29 @@ const Dashboard = (function(){
       '<div class="seal'+(b.earned?'':' locked')+'"><div class="seal-icon">'+b.icon+'</div><span>'+b.name+'</span></div>'
     ).join('');
 
+    // Typing chart
+    const tCtx = document.getElementById('typingChart');
+    const tData = typing.slice(-12);
+    if(typingChart) typingChart.destroy();
+    if(window.Chart){
+      typingChart = new Chart(tCtx, {
+        type:'line',
+        data:{ labels: tData.map((t,i)=>'#'+(i+1)), datasets:[{ data:tData.map(t=>t.wpm), borderColor:'#1F7A5C', backgroundColor:'rgba(31,122,92,0.12)', fill:true, tension:0.3, pointRadius:3 }]},
+        options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, grid:{color:'#E4E8DF'} }, x:{ grid:{display:false} } }, maintainAspectRatio:false }
+      });
+    }
+
+    // Balance chart
+    const bCtx = document.getElementById('balanceChart');
+    if(balanceChart) balanceChart.destroy();
+    if(window.Chart){
+      balanceChart = new Chart(bCtx, {
+        type:'radar',
+        data:{ labels:['Reading','Writing','Listening','Speaking','Typing','Spelling'],
+          datasets:[{ data:[reading.length,writing.length,listening.length,speaking.length,typing.length,spelling.length], borderColor:'#C98A2D', backgroundColor:'rgba(201,138,45,0.18)', pointBackgroundColor:'#C98A2D' }]},
+        options:{ plugins:{legend:{display:false}}, scales:{ r:{ beginAtZero:true, ticks:{display:false}, grid:{color:'#D8DCD3'}, pointLabels:{font:{size:11}} } }, maintainAspectRatio:false }
+      });
+    }
   }
 
   return { render };
