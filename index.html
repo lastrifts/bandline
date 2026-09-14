@@ -243,6 +243,14 @@
   .examtimes-table td:first-child{color:var(--ink-soft); font-weight:500;}
   .examtimes-table td:last-child{text-align:right; font-family:var(--font-serif); font-weight:600; color:var(--ink);}
 
+  /* ---------- Progress bars (dashboard) ---------- */
+  .progress-list{display:flex; flex-direction:column; gap:14px;}
+  .progress-row{display:flex; align-items:center; gap:12px;}
+  .progress-row .plabel{width:96px; font-size:0.82rem; color:var(--ink-soft); flex-shrink:0;}
+  .progress-row .ptrack{flex:1; height:8px; background:#E4E8DF; border-radius:6px; overflow:hidden;}
+  .progress-row .pfill{height:100%; width:0%; background:var(--jade); border-radius:6px; transition:width .7s var(--ease);}
+  .progress-row .pval{width:76px; text-align:right; font-family:var(--font-mono); font-size:0.78rem; color:var(--ink); flex-shrink:0;}
+
   /* ---------- Practice mode toggle (sidebar) ---------- */
   .pmode-toggle{display:flex; gap:2px; margin:0 12px 10px; background:rgba(255,255,255,0.06); border-radius:8px; padding:2px;}
   .pmode-btn{flex:1; background:none; border:none; color:#9DACC0; font-size:0.72rem; font-weight:600; padding:6px 0; border-radius:6px; transition:background .15s ease, color .15s ease;}
@@ -484,6 +492,16 @@
         <div class="b-tile stat">
           <div class="num" id="statTypingBest">—</div>
           <div class="lbl">Best typing speed (WPM)</div>
+        </div>
+
+        <div class="b-tile b-wide">
+          <h3>Practice averages</h3>
+          <div class="progress-list" id="progressAverages"></div>
+        </div>
+
+        <div class="b-tile b-wide">
+          <h3>Personal best · Full exam</h3>
+          <div class="progress-list" id="examBests"></div>
         </div>
 
         <div class="b-tile b-half">
@@ -1686,6 +1704,9 @@ const Writing = (function(){
         const r = await AI.askForJSON(system, user);
         if(r.ok){
           aiResult.innerHTML = renderAiFeedback(r.data);
+          // Persist the band onto the stored practice entry (best-effort)
+          // so the dashboard's "Practice averages" can include it.
+          persistWritingBand(entry.date, task, r.data.band);
         } else {
           aiResult.innerHTML = '<p class="hint" style="color:var(--coral);">'+escapeHtml(r.message)+'</p>';
         }
@@ -1693,6 +1714,23 @@ const Writing = (function(){
         aiBtn.textContent = 'Get feedback again';
       });
     }
+  }
+
+  /* Finds the most recently pushed stats:writing entry matching this
+     date/task (there's no unique id on entries, so this is best-effort)
+     and stores the AI band onto it so the dashboard can average it in. */
+  async function persistWritingBand(date, taskNum, band){
+    try{
+      const list = await Store.getList('stats:writing');
+      for(let i=list.length-1;i>=0;i--){
+        if(list[i].date===date && list[i].task==='Task '+taskNum && typeof list[i].band!=='number'){
+          list[i].band = band;
+          await window.storage.set('stats:writing', JSON.stringify(list), false);
+          document.dispatchEvent(new CustomEvent('stats:updated', { detail:{ key:'stats:writing', entry:list[i] } }));
+          break;
+        }
+      }
+    }catch(e){ /* best-effort only */ }
   }
 
   return { init, refresh: showPrep, startExamTask };
@@ -2499,8 +2537,108 @@ const Dashboard = (function(){
     requestAnimationFrame(step);
   }
 
+  /* Builds one row for a .progress-list: a label, a fill bar (0-100,
+     clamped), and a right-aligned value string. `color` lets callers pick
+     a bar color (e.g. gold for exam bests vs jade for practice averages). */
+  function progressRow(label, pct, valueText, color){
+    const clamped = Math.max(0, Math.min(100, isFinite(pct) ? pct : 0));
+    return '<div class="progress-row">' +
+      '<span class="plabel">'+label+'</span>' +
+      '<div class="ptrack"><div class="pfill" style="width:'+clamped+'%;'+(color?(' background:'+color+';'):'')+'"></div></div>' +
+      '<span class="pval">'+valueText+'</span>' +
+    '</div>';
+  }
+
+  /* "Practice averages" tile: average reading/listening/spelling accuracy,
+     average typing speed (scaled against a 100 WPM reference bar), and an
+     average writing "completion score" (words achieved vs. the task's
+     target word count, capped at 100%) since raw word counts aren't a
+     percentage and writing bands are only available when AI feedback has
+     actually been requested for a session. */
+  function renderProgressAverages(reading, writing, listening, typing, spelling){
+    const host = document.getElementById('progressAverages');
+    if(!host) return;
+    const rows = [];
+
+    rows.push(reading.length
+      ? progressRow('Reading', avg(reading,'pct'), avg(reading,'pct')+'%')
+      : progressRow('Reading', 0, 'No sessions'));
+
+    if(writing.length){
+      const scores = writing.map(w=>{
+        const target = w.task==='Task 2' ? 250 : 150;
+        return Math.min(100, Math.round((w.words/target)*100));
+      });
+      const writingAvg = Math.round(scores.reduce((s,x)=>s+x,0)/scores.length);
+      const bands = writing.map(w=>typeof w.band==='number'?w.band:null).filter(b=>b!==null);
+      const bandNote = bands.length ? ' · band '+(Math.round((bands.reduce((s,b)=>s+b,0)/bands.length)*10)/10) : '';
+      rows.push(progressRow('Writing', writingAvg, writingAvg+'%'+bandNote));
+    } else {
+      rows.push(progressRow('Writing', 0, 'No sessions'));
+    }
+
+    rows.push(listening.length
+      ? progressRow('Listening', avg(listening,'pct'), avg(listening,'pct')+'%')
+      : progressRow('Listening', 0, 'No sessions'));
+
+    if(typing.length){
+      const avgWpm = Math.round(typing.reduce((s,x)=>s+x.wpm,0)/typing.length);
+      rows.push(progressRow('Typing', avgWpm, avgWpm+' WPM'));
+    } else {
+      rows.push(progressRow('Typing', 0, 'No sessions'));
+    }
+
+    rows.push(spelling.length
+      ? progressRow('Spelling', avg(spelling,'pct'), avg(spelling,'pct')+'%')
+      : progressRow('Spelling', 0, 'No sessions'));
+
+    host.innerHTML = rows.join('');
+  }
+
+  /* "Personal best · Full exam" tile: the single highest result achieved
+     across every completed mock exam, one row per exam section. Reading/
+     Listening use the exam's average-of-passages percentage already
+     computed at submit time; Writing uses the best average AI band across
+     attempts that were actually graded; Speaking shows the longest total
+     recorded duration, formatted as mm:ss with a bar scaled against a
+     15-minute (900s) reference, matching the real test's rough length. */
+  function renderExamBests(examAttempts){
+    const host = document.getElementById('examBests');
+    if(!host) return;
+    if(!examAttempts.length){
+      host.innerHTML = '<div class="empty-state">Take the full exam at least once to see your personal bests here.</div>';
+      return;
+    }
+    const readingVals = examAttempts.map(e=>e.readingAvgPct).filter(v=>typeof v==='number');
+    const listeningVals = examAttempts.map(e=>e.listeningPct).filter(v=>typeof v==='number');
+    const writingBandVals = examAttempts.map(e=>e.writingAvgBand).filter(v=>typeof v==='number');
+    const speakingVals = examAttempts.map(e=>e.speakingSec).filter(v=>typeof v==='number');
+
+    const rows = [];
+    rows.push(readingVals.length
+      ? progressRow('Reading', Math.max(...readingVals), Math.max(...readingVals)+'%', 'var(--gold)')
+      : progressRow('Reading', 0, '—', 'var(--gold)'));
+    rows.push(listeningVals.length
+      ? progressRow('Listening', Math.max(...listeningVals), Math.max(...listeningVals)+'%', 'var(--gold)')
+      : progressRow('Listening', 0, '—', 'var(--gold)'));
+    if(writingBandVals.length){
+      const bestBand = Math.max(...writingBandVals);
+      rows.push(progressRow('Writing', (bestBand/9)*100, 'Band '+bestBand, 'var(--gold)'));
+    } else {
+      rows.push(progressRow('Writing', 0, 'Not graded', 'var(--gold)'));
+    }
+    if(speakingVals.length){
+      const bestSec = Math.max(...speakingVals);
+      rows.push(progressRow('Speaking', (bestSec/900)*100, fmtTime(bestSec), 'var(--gold)'));
+    } else {
+      rows.push(progressRow('Speaking', 0, '—', 'var(--gold)'));
+    }
+    host.innerHTML = rows.join('');
+  }
+
   async function render(){
     const [reading, writing, listening, speaking, typing, spelling] = await Promise.all(STAT_KEYS.map(Store.getList));
+    const examAttempts = await Store.getList('stats:exam');
 
     const totalSessions = reading.length+writing.length+listening.length+speaking.length+typing.length+spelling.length;
     animateNumber(document.getElementById('statSessions'), totalSessions);
@@ -2510,6 +2648,9 @@ const Dashboard = (function(){
     else document.getElementById('statListeningAvg').textContent = '—';
     if(typing.length) animateNumber(document.getElementById('statTypingBest'), Math.max(...typing.map(t=>t.wpm)));
     else document.getElementById('statTypingBest').textContent = '—';
+
+    renderProgressAverages(reading, writing, listening, typing, spelling);
+    renderExamBests(examAttempts);
 
     const allDates = [...reading,...writing,...listening,...speaking,...typing,...spelling].map(x=>x.date);
     const streak = computeStreak(allDates);
