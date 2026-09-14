@@ -486,29 +486,6 @@
           <div class="lbl">Best typing speed (WPM)</div>
         </div>
 
-        <div class="b-tile b-wide">
-          <h3>IELTS exam section times</h3>
-          <table class="examtimes-table">
-            <tbody>
-              <tr><td>📖 Reading</td><td>20 min × 3 passages = 60 min</td></tr>
-              <tr><td>✍️ Writing</td><td>Task 1: 20 min + Task 2: 40 min</td></tr>
-              <tr><td>🎧 Listening</td><td>30 minutes</td></tr>
-              <tr><td>🗣️ Speaking</td><td>~11–14 minutes</td></tr>
-            </tbody>
-          </table>
-          <p class="hint" style="margin-top:12px;">In <strong>Practice</strong>, each timer above is exactly what you'll see when you open that section — one passage, one task, one track at a time. <strong>Exam</strong> runs every part back to back at these same timings, with no way to leave until you finish and submit, and no scores are shown until the very end.</p>
-          <button class="btn btn-primary btn-sm" id="dashExamBtn" style="margin-top:14px;">Take the full exam</button>
-        </div>
-
-        <div class="b-tile b-half">
-          <h3>Typing speed over time</h3>
-          <div class="chartbox"><canvas id="typingChart"></canvas></div>
-        </div>
-        <div class="b-tile b-half">
-          <h3>Practice balance</h3>
-          <div class="chartbox"><canvas id="balanceChart"></canvas></div>
-        </div>
-
         <div class="b-tile b-half">
           <h3>Recent activity</h3>
           <div id="activityList"><div class="empty-state">Nothing yet — complete a section to see it appear here.</div></div>
@@ -2489,8 +2466,6 @@ const Typing = (function(){
    DASHBOARD MODULE
    ========================================================================= */
 const Dashboard = (function(){
-  let typingChart=null, balanceChart=null;
-
   function avg(arr, key){
     if(!arr.length) return null;
     return Math.round(arr.reduce((s,x)=>s+x[key],0)/arr.length);
@@ -2569,30 +2544,6 @@ const Dashboard = (function(){
     document.getElementById('badgeRow').innerHTML = badges.map(b=>
       '<div class="seal'+(b.earned?'':' locked')+'"><div class="seal-icon">'+b.icon+'</div><span>'+b.name+'</span></div>'
     ).join('');
-
-    // Typing chart
-    const tCtx = document.getElementById('typingChart');
-    const tData = typing.slice(-12);
-    if(typingChart) typingChart.destroy();
-    if(window.Chart){
-      typingChart = new Chart(tCtx, {
-        type:'line',
-        data:{ labels: tData.map((t,i)=>'#'+(i+1)), datasets:[{ data:tData.map(t=>t.wpm), borderColor:'#1F7A5C', backgroundColor:'rgba(31,122,92,0.12)', fill:true, tension:0.3, pointRadius:3 }]},
-        options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, grid:{color:'#E4E8DF'} }, x:{ grid:{display:false} } }, maintainAspectRatio:false }
-      });
-    }
-
-    // Balance chart
-    const bCtx = document.getElementById('balanceChart');
-    if(balanceChart) balanceChart.destroy();
-    if(window.Chart){
-      balanceChart = new Chart(bCtx, {
-        type:'radar',
-        data:{ labels:['Reading','Writing','Listening','Speaking','Typing','Spelling'],
-          datasets:[{ data:[reading.length,writing.length,listening.length,speaking.length,typing.length,spelling.length], borderColor:'#C98A2D', backgroundColor:'rgba(201,138,45,0.18)', pointBackgroundColor:'#C98A2D' }]},
-        options:{ plugins:{legend:{display:false}}, scales:{ r:{ beginAtZero:true, ticks:{display:false}, grid:{color:'#D8DCD3'}, pointLabels:{font:{size:11}} } }, maintainAspectRatio:false }
-      });
-    }
   }
 
   return { render };
@@ -2859,8 +2810,6 @@ function wirePracticeToggle(){
     showToast('Practice mode set to '+(App.practiceMode==='easy' ? 'Easy' : 'Standard')+'.');
   });
 }
-
-document.getElementById('dashExamBtn').addEventListener('click', ()=> switchView('exam'));
 
 /* =========================================================================
    INIT
