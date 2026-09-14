@@ -319,6 +319,20 @@
   .wave span{width:3px; background:#4C5F80; border-radius:2px; flex-shrink:0;}
   .wave span.live{background:var(--jade);}
 
+  /* ---------- Spelling ---------- */
+  .spelling-card{max-width:640px;}
+  .spelling-wordbox{background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:28px; text-align:center;}
+  .spelling-status{font-size:0.8rem; color:var(--ink-faint); margin-bottom:8px;}
+  .spelling-listen{width:58px; height:58px; border-radius:50%; border:none; background:var(--jade); color:#fff; display:inline-flex; align-items:center; justify-content:center; margin:8px 0 20px;}
+  .spelling-listen svg{width:24px;height:24px;}
+  .spelling-input{width:min(100%,420px); text-align:center; font-family:var(--font-serif); font-size:1.35rem; border:1px solid var(--line-strong); border-radius:7px; padding:10px 14px;}
+  .spelling-feedback{min-height:24px; margin-top:10px; font-size:0.86rem; font-weight:600;}
+  .spelling-feedback.correct{color:var(--jade-dark);}
+  .spelling-feedback.incorrect{color:var(--coral);}
+  .spelling-score{display:flex; justify-content:center; gap:28px; margin:20px 0 4px;}
+  .spelling-score .m .num{font-family:var(--font-serif); font-size:1.7rem; font-weight:600;}
+  .spelling-score .m .lbl{font-size:0.74rem; color:var(--ink-soft);}
+
   /* ---------- Speaking ---------- */
   .cuecard{background:#FBF9F2; border:1px dashed var(--gold); border-radius:10px; padding:22px 24px;}
   .cuecard h3{font-family:var(--font-serif); margin:0 0 12px;}
@@ -409,7 +423,7 @@
         <li><button class="navbtn active" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></button></li>
       </ul>
       <div class="navgrouplabel">Practice</div>
-      <div class="pmode-toggle" id="pmodeToggle" title="Sets the difficulty and pacing used across Reading, Writing, Listening and Speaking practice.">
+      <div class="pmode-toggle" id="pmodeToggle" title="Sets the difficulty used across Reading, Writing, Listening, Speaking and Spelling practice.">
         <button class="pmode-btn" data-mode="easy" type="button">Easy</button>
         <button class="pmode-btn active" data-mode="standard" type="button">Standard</button>
       </div>
@@ -419,6 +433,7 @@
         <li><button class="navbtn" data-view="listening"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="5" height="7" rx="1.5"/><rect x="17" y="14" width="5" height="7" rx="1.5"/></svg><span>Listening</span></button></li>
         <li><button class="navbtn" data-view="speaking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3.5M9 21.5h6"/></svg><span>Speaking</span></button></li>
         <li><button class="navbtn" data-view="typing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M6.5 10h1M11 10h1M15.5 10h1M6.5 13.5h9M6.5 15.7v.01"/></svg><span>Typing</span></button></li>
+        <li><button class="navbtn" data-view="spelling"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v13H4z"/><path d="M7.5 9h9M7.5 12h6M7.5 15h3"/></svg><span>Spelling</span></button></li>
       </ul>
       <div class="navgrouplabel">Exam</div>
       <ul class="navlist" id="navlist3">
@@ -610,6 +625,25 @@
       </div>
     </section>
 
+    <!-- ---------- SPELLING ---------- -->
+    <section class="view" id="view-spelling">
+      <div class="pagehead">
+        <div>
+          <h1>Spelling practice</h1>
+          <p>Listen to a word, spell what you hear, and work through as many different words as you can before the timer runs out.</p>
+        </div>
+      </div>
+      <div class="contentwrap">
+        <div class="row" style="margin-bottom:18px;">
+          <span class="tag" id="spellingDifficultyTag">Standard</span>
+          <span class="tag" id="spellingProgressTag">0 words</span>
+          <div class="spacer"></div>
+          <span class="timer" id="spellingTimer">01:00</span>
+        </div>
+        <div id="spellingBody"></div>
+      </div>
+    </section>
+
     <!-- ---------- EXAM ---------- -->
     <section class="view" id="view-exam">
       <div class="pagehead">
@@ -694,7 +728,7 @@ const Store = {
     document.dispatchEvent(new CustomEvent('stats:updated'));
   }
 };
-const STAT_KEYS = ['stats:reading','stats:writing','stats:listening','stats:speaking','stats:typing'];
+const STAT_KEYS = ['stats:reading','stats:writing','stats:listening','stats:speaking','stats:typing','stats:spelling'];
 
 /* =========================================================================
    PROFILE / ADAPTIVE DIFFICULTY
@@ -1012,7 +1046,7 @@ window.addEventListener('load', ()=> positionNavIndicator());
 
 document.getElementById('resetProgressBtn').addEventListener('click', async ()=>{
   if(App.lockedView) return;
-  if(confirm('This clears all saved reading, writing, listening, speaking and typing history, plus your level settings. Continue?')){
+  if(confirm('This clears all saved reading, writing, listening, speaking, typing and spelling history, plus your level settings. Continue?')){
     await Store.clearAll(STAT_KEYS);
     await Store.clearAll(['stats:exam']);
     await Store.clearAll(['profile:onboarded','profile:level','profile:readingLevel','profile:listeningLevel','profile:practiceMode']);
@@ -1265,6 +1299,24 @@ const SPEAKING_CONTENT = {
     'How has technology changed the way people learn new skills?',
     'Is it better to learn a skill alone or with the guidance of a teacher? Why?',
     'Do you think everyone should keep learning new things throughout their life?'
+  ]
+};
+
+const SPELLING_WORDS = {
+  easy: [
+    'apple','animal','answer','basket','before','better','bottle','brother','button','camera',
+    'candle','circle','coffee','country','dinner','doctor','family','flower','friend','garden',
+    'happy','holiday','kitchen','letter','market','morning','mountain','number','orange','paper',
+    'people','picture','planet','school','simple','summer','teacher','travel','window','yellow',
+    'airport','birthday','breakfast','computer','evening','football','library','medicine','station','weather'
+  ],
+  standard: [
+    'accommodation','advertisement','architecture','beneficial','celebration','communication','community','convenient','environment','especially',
+    'experience','government','independent','information','international','knowledge','necessary','opportunity','organization','performance',
+    'population','preparation','professional','recommendation','responsibility','restaurant','significant','technology','temperature','traditional',
+    'transportation','university','vegetable','available','beautiful','business','competition','development','education','employment',
+    'enthusiasm','equipment','excellent','familiar','foreign','guarantee','immediately','impressive','maintenance','successful',
+    'achievement','analysis','argument','colleague','decision','discussion','effective','fascinating','financial','percentage'
   ]
 };
 
@@ -2181,6 +2233,152 @@ const Speaking = (function(){
 /* =========================================================================
    TYPING MODULE
    ========================================================================= */
+const Spelling = (function(){
+  let words = [];
+  let currentIndex = 0;
+  let timer = null;
+  let duration = 60;
+  let correct = 0;
+  let attempted = 0;
+  let active = false;
+  let finished = false;
+  let currentWord = '';
+  let lastSpoken = '';
+
+  function init(){
+    renderPrep();
+  }
+
+  function difficulty(){ return App.practiceMode === 'easy' ? 'easy' : 'standard'; }
+
+  function renderPrep(){
+    const body = document.getElementById('spellingBody');
+    const label = difficulty()==='easy' ? 'Easy' : 'Standard';
+    document.getElementById('spellingDifficultyTag').textContent = label;
+    document.getElementById('spellingProgressTag').textContent = '0 words';
+    body.innerHTML =
+      '<div class="card prepcard spelling-card">' +
+        '<h2>Spelling practice</h2>' +
+        '<p class="prepmeta">'+label+' words · 1-minute challenge</p>' +
+        '<ul class="preptips">' +
+          '<li>'+ICO.check+'<span>You will hear a different English word one at a time.</span></li>' +
+          '<li>'+ICO.check+'<span>Type the spelling you think you heard, then press <strong>Check</strong> or Enter.</span></li>' +
+          '<li>'+ICO.check+'<span>Keep going until the timer reaches zero. Your score is based on correct spellings.</span></li>' +
+        '</ul>' +
+        '<div class="prepstart-row"><button class="btn btn-primary prepStartBtn">Start spelling</button></div>' +
+      '</div>';
+    body.querySelector('.prepStartBtn').addEventListener('click', start, {once:true});
+  }
+
+  function start(){
+    words = [...SPELLING_WORDS[difficulty()]];
+    for(let i=words.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [words[i],words[j]]=[words[j],words[i]]; }
+    currentIndex = 0;
+    correct = 0;
+    attempted = 0;
+    active = true;
+    finished = false;
+    duration = 60;
+    timer = makeTimer(duration, [document.getElementById('spellingTimer')], finish);
+    lockNav('spelling');
+    renderRound();
+    timer.start();
+    speakCurrent();
+  }
+
+  function renderRound(){
+    if(!active) return;
+    currentWord = words[currentIndex % words.length];
+    const body = document.getElementById('spellingBody');
+    document.getElementById('spellingDifficultyTag').textContent = difficulty()==='easy' ? 'Easy' : 'Standard';
+    document.getElementById('spellingProgressTag').textContent = attempted + ' words';
+    body.innerHTML =
+      '<div class="card spelling-card">' +
+        '<div class="spelling-wordbox">' +
+          '<div class="spelling-status">Word '+(attempted+1)+'</div>' +
+          '<button class="spelling-listen" id="spellingListenBtn" type="button" aria-label="Listen to word">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9.5a4 4 0 0 1 0 5M18.5 7a7.5 7.5 0 0 1 0 10"/></svg>' +
+          '</button>' +
+          '<div><input id="spellingInput" class="spelling-input" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Type the spelling…"></div>' +
+          '<div class="spelling-feedback" id="spellingFeedback"></div>' +
+        '</div>' +
+        '<div class="spelling-score">' +
+          '<div class="m"><div class="num" id="spellingCorrect">'+correct+'</div><div class="lbl">Correct</div></div>' +
+          '<div class="m"><div class="num" id="spellingAccuracy">'+accuracy()+'%</div><div class="lbl">Accuracy</div></div>' +
+        '</div>' +
+        '<div class="row" style="justify-content:center; margin-top:18px;">' +
+          '<button class="btn btn-primary" id="spellingCheckBtn">Check</button>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('spellingListenBtn').addEventListener('click', speakCurrent);
+    document.getElementById('spellingCheckBtn').addEventListener('click', check);
+    const input = document.getElementById('spellingInput');
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); check(); } });
+    input.focus();
+  }
+
+  function speakCurrent(){
+    if(!active || finished) return;
+    lastSpoken = currentWord;
+    if(window.speechSynthesis){
+      Speech.speak(currentWord, {rate:0.82});
+    } else {
+      const f = document.getElementById('spellingFeedback');
+      if(f) f.textContent = 'Spoken audio is not supported in this browser.';
+    }
+  }
+
+  function accuracy(){ return attempted ? Math.round((correct/attempted)*100) : 100; }
+
+  function check(){
+    if(!active || finished) return;
+    const input = document.getElementById('spellingInput');
+    if(!input || !input.value.trim()) return;
+    const answer = input.value.trim().toLowerCase();
+    const expected = currentWord.toLowerCase();
+    attempted++;
+    const isCorrect = answer === expected;
+    if(isCorrect) correct++;
+    const feedback = document.getElementById('spellingFeedback');
+    if(feedback){
+      feedback.className = 'spelling-feedback '+(isCorrect?'correct':'incorrect');
+      feedback.textContent = isCorrect ? 'Correct!' : 'Correct spelling: '+currentWord;
+    }
+    document.getElementById('spellingCorrect').textContent = correct;
+    document.getElementById('spellingAccuracy').textContent = accuracy()+'%';
+    document.getElementById('spellingProgressTag').textContent = attempted + ' words';
+    input.disabled = true;
+    document.getElementById('spellingCheckBtn').disabled = true;
+    setTimeout(()=>{
+      if(!active || finished) return;
+      currentIndex++;
+      renderRound();
+      speakCurrent();
+    }, 550);
+  }
+
+  function finish(){
+    if(finished) return;
+    finished = true;
+    active = false;
+    if(window.speechSynthesis) window.speechSynthesis.cancel();
+    if(timer) timer.pause();
+    const pct = accuracy();
+    document.getElementById('spellingProgressTag').textContent = attempted + ' words';
+    document.getElementById('spellingBody').innerHTML =
+      '<div class="card spelling-card">' +
+        '<div class="resultbig"><span class="n">'+correct+'</span><span>/ '+attempted+' correct ('+pct+'%)</span></div>' +
+        '<p class="hint" style="margin-top:8px;">You completed '+attempted+' word'+(attempted===1?'':'s')+' in one minute.</p>' +
+        '<div class="prepstart-row"><button class="btn btn-primary" id="spellingAgainBtn">Practice again</button></div>' +
+      '</div>';
+    document.getElementById('spellingAgainBtn').addEventListener('click', renderPrep, {once:true});
+    unlockNav();
+    Store.push('stats:spelling', {date:todayISO(), difficulty:difficulty(), correct, total:attempted, pct, timeSec:duration});
+  }
+
+  return { init, refresh: renderPrep };
+})();
+
 const Typing = (function(){
   let passageIdx = 0;
   let duration = 180;
@@ -2327,9 +2525,9 @@ const Dashboard = (function(){
   }
 
   async function render(){
-    const [reading, writing, listening, speaking, typing] = await Promise.all(STAT_KEYS.map(Store.getList));
+    const [reading, writing, listening, speaking, typing, spelling] = await Promise.all(STAT_KEYS.map(Store.getList));
 
-    const totalSessions = reading.length+writing.length+listening.length+speaking.length+typing.length;
+    const totalSessions = reading.length+writing.length+listening.length+speaking.length+typing.length+spelling.length;
     animateNumber(document.getElementById('statSessions'), totalSessions);
     if(reading.length) animateNumber(document.getElementById('statReadingAvg'), avg(reading,'pct'), '%');
     else document.getElementById('statReadingAvg').textContent = '—';
@@ -2338,7 +2536,7 @@ const Dashboard = (function(){
     if(typing.length) animateNumber(document.getElementById('statTypingBest'), Math.max(...typing.map(t=>t.wpm)));
     else document.getElementById('statTypingBest').textContent = '—';
 
-    const allDates = [...reading,...writing,...listening,...speaking,...typing].map(x=>x.date);
+    const allDates = [...reading,...writing,...listening,...speaking,...typing,...spelling].map(x=>x.date);
     const streak = computeStreak(allDates);
     animateNumber(document.getElementById('streakNum'), streak);
     document.getElementById('streakSub').textContent = streak>0 ? 'days in a row — keep it going' : 'days in a row — practice today to start one';
@@ -2350,6 +2548,7 @@ const Dashboard = (function(){
     listening.forEach(l=>events.push({date:l.date, icon:ICO.headphones, text:'Listening — "'+l.title+'"', meta:l.score+'/'+l.total+' correct'}));
     speaking.forEach(s=>events.push({date:s.date, icon:ICO.mic, text:'Speaking — '+s.part, meta:s.durationSec+'s recorded'}));
     typing.forEach(t=>events.push({date:t.date, icon:ICO.keyboard, text:'Typing test', meta:t.wpm+' WPM, '+t.accuracy+'% accurate'}));
+    spelling.forEach(s=>events.push({date:s.date, icon:ICO.keyboard, text:'Spelling practice', meta:s.correct+'/'+s.total+' correct'}));
     events.sort((a,b)=> a.date < b.date ? 1 : -1);
     const activityEl = document.getElementById('activityList');
     if(!events.length){
@@ -2365,7 +2564,7 @@ const Dashboard = (function(){
       {id:'first', name:'First session', earned: totalSessions>=1, icon:ICO.star},
       {id:'streak5', name:'5-day streak', earned: streak>=5, icon:ICO.flame},
       {id:'typist', name:'60+ WPM', earned: typing.some(t=>t.wpm>=60), icon:ICO.bolt},
-      {id:'allrounder', name:'All-rounder', earned: [reading,writing,listening,speaking,typing].every(a=>a.length>0), icon:ICO.check}
+      {id:'allrounder', name:'All-rounder', earned: [reading,writing,listening,speaking,typing,spelling].every(a=>a.length>0), icon:ICO.check}
     ];
     document.getElementById('badgeRow').innerHTML = badges.map(b=>
       '<div class="seal'+(b.earned?'':' locked')+'"><div class="seal-icon">'+b.icon+'</div><span>'+b.name+'</span></div>'
@@ -2389,8 +2588,8 @@ const Dashboard = (function(){
     if(window.Chart){
       balanceChart = new Chart(bCtx, {
         type:'radar',
-        data:{ labels:['Reading','Writing','Listening','Speaking','Typing'],
-          datasets:[{ data:[reading.length,writing.length,listening.length,speaking.length,typing.length], borderColor:'#C98A2D', backgroundColor:'rgba(201,138,45,0.18)', pointBackgroundColor:'#C98A2D' }]},
+        data:{ labels:['Reading','Writing','Listening','Speaking','Typing','Spelling'],
+          datasets:[{ data:[reading.length,writing.length,listening.length,speaking.length,typing.length,spelling.length], borderColor:'#C98A2D', backgroundColor:'rgba(201,138,45,0.18)', pointBackgroundColor:'#C98A2D' }]},
         options:{ plugins:{legend:{display:false}}, scales:{ r:{ beginAtZero:true, ticks:{display:false}, grid:{color:'#D8DCD3'}, pointLabels:{font:{size:11}} } }, maintainAspectRatio:false }
       });
     }
@@ -2656,6 +2855,7 @@ function wirePracticeToggle(){
     Reading.setLevel(App.practiceMode==='easy' ? 0 : 1);
     Listening.setLevel(App.practiceMode==='easy' ? 0 : 1);
     Writing.refresh();
+    Spelling.refresh();
     showToast('Practice mode set to '+(App.practiceMode==='easy' ? 'Easy' : 'Standard')+'.');
   });
 }
@@ -2674,6 +2874,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   await Listening.init();
   Speaking.init();
   Typing.init();
+  Spelling.init();
   wirePracticeToggle();
   aiSettingsModal();
   Dashboard.render();
