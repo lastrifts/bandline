@@ -482,14 +482,6 @@
           <div class="lbl">Total sessions completed</div>
         </div>
         <div class="b-tile stat">
-          <div class="num" id="statReadingAvg">—</div>
-          <div class="lbl">Avg. reading score</div>
-        </div>
-        <div class="b-tile stat">
-          <div class="num" id="statListeningAvg">—</div>
-          <div class="lbl">Avg. listening score</div>
-        </div>
-        <div class="b-tile stat">
           <div class="num" id="statTypingBest">—</div>
           <div class="lbl">Best typing speed (WPM)</div>
         </div>
@@ -2642,10 +2634,6 @@ const Dashboard = (function(){
 
     const totalSessions = reading.length+writing.length+listening.length+speaking.length+typing.length+spelling.length;
     animateNumber(document.getElementById('statSessions'), totalSessions);
-    if(reading.length) animateNumber(document.getElementById('statReadingAvg'), avg(reading,'pct'), '%');
-    else document.getElementById('statReadingAvg').textContent = '—';
-    if(listening.length) animateNumber(document.getElementById('statListeningAvg'), avg(listening,'pct'), '%');
-    else document.getElementById('statListeningAvg').textContent = '—';
     if(typing.length) animateNumber(document.getElementById('statTypingBest'), Math.max(...typing.map(t=>t.wpm)));
     else document.getElementById('statTypingBest').textContent = '—';
 
