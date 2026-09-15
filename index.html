@@ -1936,14 +1936,6 @@ const Listening = (function(){
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit answers';
         }
-
-        const limitSeconds = App.examMode ? EXAM_PART_SECONDS : PRACTICE_SECONDS;
-        console.log('[Listening] starting answer timer for', limitSeconds, 'seconds');
-        timer = makeTimer(limitSeconds, [document.getElementById('listeningTimer')], ()=>{
-          if(!submitted) submit();
-        });
-        timer.start();
-        console.log('[Listening] timer.start() returned; display is now', document.getElementById('listeningTimer').textContent);
       }catch(err){
         console.error('[Listening] endAudio threw:', err);
       }
@@ -1954,19 +1946,20 @@ const Listening = (function(){
     window.__listenEndAudio = endAudio;
 
     function beginAudio(){
-      const banner = document.getElementById('listeningReadingBanner');
-      if(banner) banner.remove();
-      const playerBar = document.getElementById('listenPlayerBar');
-      if(playerBar) playerBar.style.display = 'flex';
+  const banner = document.getElementById('listeningReadingBanner');
+  if(banner) banner.remove();
+  const playerBar = document.getElementById('listenPlayerBar');
+  if(playerBar) playerBar.style.display = 'flex';
 
-      for(let i=0;i<40;i++){
-        const bar = document.createElement('span');
-        bar.style.height = (6+Math.random()*20)+'px';
-        document.getElementById('listenWave').appendChild(bar);
-      }
+  const limitSeconds = App.examMode ? EXAM_PART_SECONDS : PRACTICE_SECONDS;
+  timer = makeTimer(limitSeconds, [document.getElementById('listeningTimer')], ()=>{
+    if(!submitted) submit();
+  });
+  timer.start();
 
-      setTimeout(()=> play(endAudio), 150);
-    }
+  for(let i=0;i<40;i++){ /* wave bars */ }
+  setTimeout(()=> play(endAudio), 150);
+}
 
     document.getElementById('listeningSubmitBtn').addEventListener('click', submit);
     document.getElementById('listeningTrackPicker').disabled = true;
