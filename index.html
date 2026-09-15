@@ -561,7 +561,7 @@
         <div class="row" style="margin-bottom:18px;">
           <select class="btn btn-ghost" id="listeningTrackPicker" style="appearance:auto;"></select>
           <div class="spacer"></div>
-          <span class="timer" id="listeningTimer">30:00</span>
+          <span class="timer" id="listeningTimer">15:00</span>
         </div>
         <div id="listeningBody"></div>
       </div>
@@ -1806,7 +1806,8 @@ const Listening = (function(){
   let played = false;
   let timer = null;
   let submitted = false;
-  const EXAM_SECONDS = 1800; // real IELTS Listening allows 30 minutes total
+  const PRACTICE_SECONDS = 900; // 15 minutes per part in practice mode
+  const EXAM_PART_SECONDS = 480; // 8 minutes per part during the full exam
 
   async function init(){
     levelIdx = clampLevel(await Profile.get('profile:listeningLevel', 0), 1);
@@ -1834,17 +1835,31 @@ const Listening = (function(){
     showPrep();
   }
 
+  function goToPart(i, opts){
+    opts = opts || {};
+    idx = clampLevel(i, LISTENING_TRACKS.length-1);
+    const picker = document.getElementById('listeningTrackPicker');
+    if(picker){
+      picker.value = String(idx);
+      picker.disabled = !!opts.disablePicker;
+    }
+    showPrep();
+  }
+
   function showPrep(){
     played = false;
     submitted = false;
     window.speechSynthesis && window.speechSynthesis.cancel();
-    document.getElementById('listeningTimer').textContent = fmtTime(EXAM_SECONDS);
+    const limitSeconds = App.examMode ? EXAM_PART_SECONDS : PRACTICE_SECONDS;
+    document.getElementById('listeningTimer').textContent = fmtTime(limitSeconds);
     const t = LISTENING_TRACKS[idx];
     renderPrepScreen(document.getElementById('listeningBody'), {
       title: t.title,
-      meta: '<span class="tag">'+LEVEL_LABELS[t.level]+'</span> · '+Math.round(EXAM_SECONDS/60)+' minutes · '+t.questions.length + ' questions',
+      meta: '<span class="tag">'+LEVEL_LABELS[t.level]+'</span> · '+Math.round(limitSeconds/60)+' minutes · '+t.questions.length + ' questions',
       tips: [
-        'You get 30 minutes total, just like the real test — the clock starts the moment you press start and cannot be paused.',
+        App.examMode
+          ? 'You get 8 minutes of answering time per part in the full exam — the clock starts once the audio ends and cannot be paused.'
+          : 'You get 15 minutes of answering time for this part — the clock starts once the audio ends and cannot be paused.',
         'The audio plays through your browser\'s spoken-voice engine, once only — there is no pause, rewind or replay button, just like the real test.',
         'Read the questions below the moment they appear and listen for the answers as the audio plays.',
         'Write down an answer even if you are unsure — partial answers can still be graded once the recording ends.',
@@ -1857,28 +1872,82 @@ const Listening = (function(){
   }
 
   function load(){
+    played = false;
     submitted = false;
-    const p = READING_PASSAGES[idx];
-    timer = makeTimer(p.timeLimit, [document.getElementById('readingTimer')], ()=>{
-      if(!submitted) submit();
-    });
+    const t = LISTENING_TRACKS[idx];
+    const body = document.getElementById('listeningBody');
+    const READING_SECONDS = 60;
 
-    const body = document.getElementById('readingBody');
+    // Build the questions HTML once — used in both the reading phase and
+    // the answer phase, so we don't have to re-render (which would wipe
+    // any answers the learner typed in a race).
+    let prevSection = null;
+    let displayNum = 0;
+    const questionsHtml = t.questions.map((q,i)=>{
+      const num = q.skip ? null : (++displayNum);
+      const html = renderQ(q, i, prevSection, num);
+      if(q.section) prevSection = q.section;
+      return html;
+    }).join('');
+    const questionsBlockHtml =
+      (t.intro ? '<div class="qintro">'+t.intro+'</div>' : '') +
+      (t.groupTitle ? '<h3 class="qgrouptitle">'+t.groupTitle+'</h3>' : '') +
+      (t.header ? '<div class="qheader">'+t.header+'</div>' : '') +
+      questionsHtml;
+
     body.innerHTML =
-      '<div class="split">' +
-        '<div class="card"><div class="passage">' + p.paragraphs.map(t=>'<p>'+t+'</p>').join('') + '</div></div>' +
-        '<div><div id="readingQuestions"></div>' +
-          '<button class="btn btn-primary" id="readingSubmitBtn">Submit answers</button>' +
-          '<div id="readingResult" style="margin-top:20px;"></div>' +
-        '</div>' +
-      '</div>';
+      '<div class="playerbar" id="listenPlayerBar" style="display:none;">' +
+        '<span class="livepill" id="listenLivePill"><span class="dot"></span>Playing</span>' +
+        '<div class="wave" id="listenWave"></div>' +
+      '</div>' +
+      '<div id="listeningReadingBanner" class="banner banner-info" style="align-items:center;">' +
+        '<strong>Reading time — <span id="listeningReadTimer">01:00</span></strong>' +
+        '<span>Look through the questions below. The audio will start automatically when the minute is up.</span>' +
+      '</div>' +
+      '<div id="listeningQuestions">'+questionsBlockHtml+'</div>' +
+      '<button class="btn btn-primary" id="listeningSubmitBtn" style="display:none;">Submit answers</button>' +
+      '<div id="listeningResult" style="margin-top:20px;"></div>';
 
-    const qwrap = document.getElementById('readingQuestions');
-    qwrap.innerHTML = p.questions.map((q,i)=>renderQuestion(q,i)).join('');
-    document.getElementById('readingSubmitBtn').addEventListener('click', submit);
-    document.getElementById('readingPassagePicker').disabled = true;
-    lockNav('reading');
-    timer.start();
+    // Reading phase: questions visible, audio hidden, 1-minute countdown.
+    const readTimer = makeTimer(READING_SECONDS, [document.getElementById('listeningReadTimer')], beginAudio);
+    readTimer.start();
+
+    function beginAudio(){
+      const banner = document.getElementById('listeningReadingBanner');
+      if(banner) banner.remove();
+      const playerBar = document.getElementById('listenPlayerBar');
+      if(playerBar) playerBar.style.display = 'flex';
+
+      for(let i=0;i<40;i++){
+        const bar = document.createElement('span');
+        bar.style.height = (6+Math.random()*20)+'px';
+        document.getElementById('listenWave').appendChild(bar);
+      }
+
+      setTimeout(play, 150);
+    }
+
+    function endAudio(){
+      const playerBar = document.getElementById('listenPlayerBar');
+      if(playerBar) playerBar.style.display = 'none';
+      const submitBtn = document.getElementById('listeningSubmitBtn');
+      if(submitBtn){ submitBtn.style.display = 'inline-flex'; submitBtn.disabled = false; submitBtn.textContent = 'Submit answers'; }
+
+      const limitSeconds = App.examMode ? EXAM_PART_SECONDS : PRACTICE_SECONDS;
+      timer = makeTimer(limitSeconds, [document.getElementById('listeningTimer')], ()=>{
+        if(!submitted) submit();
+      });
+      timer.start();
+    }
+
+    window.__listenEndAudio = endAudio;
+
+    document.getElementById('listeningSubmitBtn').addEventListener('click', submit);
+    document.getElementById('listeningTrackPicker').disabled = true;
+    lockNav('listening');
+
+    const limitSeconds = App.examMode ? EXAM_PART_SECONDS : PRACTICE_SECONDS;
+    document.getElementById('listeningTimer').textContent = fmtTime(limitSeconds);
   }
 
   function renderQ(q,i,prevSection,displayNum){
@@ -2007,7 +2076,7 @@ const Listening = (function(){
     Store.push('stats:listening', { date:todayISO(), title:t.title, score, total:t.questions.length, pct });
   }
 
-  return { init, setLevel };
+  return { init, setLevel, goToPart };
 })();
 
 /* =========================================================================
@@ -2806,7 +2875,7 @@ const Exam = (function(){
   function freshState(){
     return {
       active:false, submitted:false, step:null,
-      readingSub:0, writingSub:0, speakingSub:0,
+      readingSub:0, writingSub:0, listeningSub:0, speakingSub:0,
       results:{ listening:null, reading:[], writing:[], speaking:[] }
     };
   }
@@ -2848,7 +2917,8 @@ const Exam = (function(){
       document.querySelectorAll('#view-writing .tabbtn').forEach(b=>b.classList.add('examlock'));
       Writing.startExamTask(1);
     } else if(step==='listening'){
-      Listening.setLevel(1, {disablePicker:true});
+      state.listeningSub = 0;
+      Listening.goToPart(0, {disablePicker:true});
     } else if(step==='speaking'){
       document.querySelectorAll('#view-speaking .tabbtn').forEach(b=>b.classList.add('examlock'));
       Speaking.goToExamPart(1);
@@ -2877,7 +2947,14 @@ const Exam = (function(){
         goToStep('listening');
       }
     } else if(state.step==='listening'){
-      goToStep('speaking');
+      state.listeningSub = (state.listeningSub || 0) + 1;
+      if(state.listeningSub < LISTENING_TRACKS.length){
+        Listening.goToPart(state.listeningSub, {disablePicker:true});
+        lockNav('listening');
+        renderHub();
+      } else {
+        goToStep('speaking');
+      }
     } else if(state.step==='speaking'){
       state.speakingSub += 1;
       if(state.speakingSub < 3){
@@ -2961,7 +3038,7 @@ const Exam = (function(){
     const items = [
       {label:'Reading — passage '+Math.min(state.readingSub+1,3)+' of 3', done: state.step!=='reading'},
       {label:'Writing — task '+Math.min(state.writingSub+1,2)+' of 2', done: state.step!=='reading' && state.step!=='writing'},
-      {label:'Listening', done: state.step==='speaking' || state.step==='exam'},
+      {label:'Listening — part '+Math.min((state.listeningSub||0)+1,4)+' of 4', done: state.step==='speaking' || state.step==='exam'},
       {label:'Speaking — part '+Math.min(state.speakingSub+1,3)+' of 3', done: state.step==='exam'}
     ];
     const allDone = items.every(i=>i.done);
