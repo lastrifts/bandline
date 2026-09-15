@@ -1460,29 +1460,93 @@ const Reading = (function(){
     });
   }
 
-  function load(){
+   function load(){
+    played = false;
     submitted = false;
-    const p = READING_PASSAGES[idx];
-    timer = makeTimer(p.timeLimit, [document.getElementById('readingTimer')], ()=>{
-      if(!submitted) submit();
-    });
+    const t = LISTENING_TRACKS[idx];
+    const body = document.getElementById('listeningBody');
+    const READING_SECONDS = 60;
 
-    const body = document.getElementById('readingBody');
+    // Build the questions HTML once — used in both the reading phase and
+    // the answer phase, so we don't have to re-render (which would wipe
+    // any answers the learner typed in a race).
+    let prevSection = null;
+    let displayNum = 0;
+    const questionsHtml = t.questions.map((q,i)=>{
+      const num = q.skip ? null : (++displayNum);
+      const html = renderQ(q, i, prevSection, num);
+      if(q.section) prevSection = q.section;
+      return html;
+    }).join('');
+    const questionsBlockHtml =
+      (t.intro ? '<div class="qintro">'+t.intro+'</div>' : '') +
+      (t.groupTitle ? '<h3 class="qgrouptitle">'+t.groupTitle+'</h3>' : '') +
+      (t.header ? '<div class="qheader">'+t.header+'</div>' : '') +
+      questionsHtml;
+
     body.innerHTML =
-      '<div class="split">' +
-        '<div class="card"><div class="passage">' + p.paragraphs.map(t=>'<p>'+t+'</p>').join('') + '</div></div>' +
-        '<div><div id="readingQuestions"></div>' +
-          '<button class="btn btn-primary" id="readingSubmitBtn">Submit answers</button>' +
-          '<div id="readingResult" style="margin-top:20px;"></div>' +
-        '</div>' +
-      '</div>';
+      '<div class="playerbar" id="listenPlayerBar" style="display:none;">' +
+        '<span class="livepill" id="listenLivePill"><span class="dot"></span>Playing</span>' +
+        '<div class="wave" id="listenWave"></div>' +
+      '</div>' +
+      '<div id="listeningReadingBanner" class="banner banner-info" style="align-items:center;">' +
+        '<strong>Reading time — <span id="listeningReadTimer">01:00</span></strong>' +
+        '<span>Look through the questions below. The audio will start automatically when the minute is up.</span>' +
+      '</div>' +
+      '<div id="listeningQuestions">'+questionsBlockHtml+'</div>' +
+      '<button class="btn btn-primary" id="listeningSubmitBtn" style="display:none;">Submit answers</button>' +
+      '<div id="listeningResult" style="margin-top:20px;"></div>';
 
-    const qwrap = document.getElementById('readingQuestions');
-    qwrap.innerHTML = p.questions.map((q,i)=>renderQuestion(q,i)).join('');
-    document.getElementById('readingSubmitBtn').addEventListener('click', submit);
-    document.getElementById('readingPassagePicker').disabled = true;
-    lockNav('reading');
-    timer.start();
+    // Reading phase: questions visible, audio hidden, 1-minute countdown.
+    const readTimer = makeTimer(READING_SECONDS, [document.getElementById('listeningReadTimer')], beginAudio);
+    readTimer.start();
+
+    function beginAudio(){
+      // Swap out the reading banner, hide the questions so the learner
+      // can't peek while listening, and show the player bar.
+      const banner = document.getElementById('listeningReadingBanner');
+      if(banner) banner.remove();
+      const playerBar = document.getElementById('listenPlayerBar');
+      if(playerBar) playerBar.style.display = 'flex';
+
+      // Build the waveform bars now that the bar is visible.
+      for(let i=0;i<40;i++){
+        const bar = document.createElement('span');
+        bar.style.height = (6+Math.random()*20)+'px';
+        document.getElementById('listenWave').appendChild(bar);
+      }
+
+      // Give the browser a moment to paint before the audio starts, so the
+      // swap doesn't feel like it stutters.
+      setTimeout(play, 150);
+    }
+
+    function endAudio(){
+      // Reveal the questions again for the answering phase.
+      const playerBar = document.getElementById('listenPlayerBar');
+      if(playerBar) playerBar.style.display = 'none';
+      const submitBtn = document.getElementById('listeningSubmitBtn');
+      if(submitBtn){ submitBtn.style.display = 'inline-flex'; submitBtn.disabled = false; submitBtn.textContent = 'Submit answers'; }
+
+      // Now start the 30-minute overall clock, matching the real test —
+      // reading time doesn't count against it.
+      timer = makeTimer(EXAM_SECONDS, [document.getElementById('listeningTimer')], ()=>{
+        if(!submitted) submit();
+      });
+      timer.start();
+    }
+
+    // `play()` needs access to endAudio() so we can hook the audio's
+    // "ended" event. Store it on a module-level variable the play()
+    // function can call.
+    window.__listenEndAudio = endAudio;
+
+    document.getElementById('listeningSubmitBtn').addEventListener('click', submit);
+    document.getElementById('listeningTrackPicker').disabled = true;
+    lockNav('listening');
+
+    // Pause the overall 30-min timer display until audio starts.
+    document.getElementById('listeningTimer').textContent = fmtTime(EXAM_SECONDS);
   }
 
   function renderQuestion(q,i){
@@ -1921,7 +1985,7 @@ const Listening = (function(){
     return sectionHeader + '<div class="qblock" data-qi="'+i+'"><div class="qtext"><span class="qnum">'+(displayNum||'')+'</span>'+q.q+'</div>'+inner+'</div>';
   }
 
-  function play(){
+   function play(){
     const t = LISTENING_TRACKS[idx];
     const waveBars = document.querySelectorAll('#listenWave span');
     let waveHandle = setInterval(()=>{
@@ -1934,8 +1998,7 @@ const Listening = (function(){
       const pill = document.getElementById('listenLivePill');
       if(pill) pill.outerHTML = '<span class="runninglabel">Audio finished — it will not play again</span>';
       played = true;
-      const submitBtn = document.getElementById('listeningSubmitBtn');
-      if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Submit answers'; }
+      if(typeof window.__listenEndAudio === 'function') window.__listenEndAudio();
     }
 
     if(t.audio){
