@@ -1957,7 +1957,11 @@ const Listening = (function(){
   });
   timer.start();
 
-  for(let i=0;i<40;i++){ /* wave bars */ }
+        for(let i=0;i<40;i++){
+        const bar = document.createElement('span');
+        bar.style.height = (6+Math.random()*20)+'px';
+        document.getElementById('listenWave').appendChild(bar);
+      }
   setTimeout(()=> play(endAudio), 150);
 }
 
