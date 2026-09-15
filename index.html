@@ -1904,6 +1904,10 @@ const Listening = (function(){
         '<strong>Reading time — <span id="listeningReadTimer">01:00</span></strong>' +
         '<span>Look through the questions below. The audio will start automatically when the minute is up.</span>' +
       '</div>' +
+      '<div id="listeningAnswerBanner" class="banner banner-good" style="display:none; align-items:center;">' +
+        '<strong>Audio finished — now answer the questions below.</strong>' +
+        '<span>Take your time and check your answers before submitting.</span>' +
+      '</div>' +
       '<div id="listeningQuestions">'+questionsBlockHtml+'</div>' +
       '<button class="btn btn-primary" id="listeningSubmitBtn" style="display:none;">Submit answers</button>' +
       '<div id="listeningResult" style="margin-top:20px;"></div>';
@@ -1930,6 +1934,11 @@ const Listening = (function(){
     function endAudio(){
       const playerBar = document.getElementById('listenPlayerBar');
       if(playerBar) playerBar.style.display = 'none';
+
+      // Tell the learner the audio is over and it's time to answer.
+      const answerBanner = document.getElementById('listeningAnswerBanner');
+      if(answerBanner) answerBanner.style.display = 'flex';
+
       const submitBtn = document.getElementById('listeningSubmitBtn');
       if(submitBtn){ submitBtn.style.display = 'inline-flex'; submitBtn.disabled = false; submitBtn.textContent = 'Submit answers'; }
 
@@ -1938,6 +1947,10 @@ const Listening = (function(){
         if(!submitted) submit();
       });
       timer.start();
+
+      // Bring the banner into view, so the learner notices the change
+      // even if they'd scrolled down to look at the notes.
+      if(answerBanner) answerBanner.scrollIntoView({behavior:'smooth', block:'start'});
     }
 
     window.__listenEndAudio = endAudio;
@@ -1987,13 +2000,34 @@ const Listening = (function(){
 
     if(t.audio){
       const player = new Audio(t.audio);
-      player.addEventListener('ended', audioFinished, {once:true});
+      let done = false;
+      const finishOnce = (reason) => {
+        if(done) return;
+        done = true;
+        console.log('[Listening] audio finished via', reason);
+        audioFinished();
+      };
+
+      // Belt and braces: three independent triggers, so even if the
+      // browser never fires `ended` (some codecs / streams do this), the
+      // timeupdate poll catches the end of playback.
+      player.addEventListener('ended', () => finishOnce('ended-event'), {once:true});
+      player.onended = () => finishOnce('onended-prop');
+
+      player.addEventListener('timeupdate', () => {
+        if(player.duration && isFinite(player.duration)
+           && player.currentTime >= player.duration - 0.15){
+          finishOnce('timeupdate-poll');
+        }
+      });
+
       player.addEventListener('error', ()=>{
-        console.warn('Could not load', t.audio, '— falling back to speech synthesis.');
+        console.warn('[Listening] could not load', t.audio, '— falling back.');
         fallbackToSpeech();
       }, {once:true});
-      player.play().catch(()=>{
-        console.warn('Playback was blocked — falling back to speech synthesis.');
+
+      player.play().catch((err)=>{
+        console.warn('[Listening] playback blocked:', err && err.message, '— falling back.');
         fallbackToSpeech();
       });
     } else {
@@ -2001,6 +2035,13 @@ const Listening = (function(){
     }
 
     function fallbackToSpeech(){
+      // If there's no audio AND no script, there's nothing to play — don't
+      // hang waiting for an 'ended' event that will never fire.
+      if(!t.script || !t.script.trim()){
+        console.warn('[Listening] no audio and no script for', t.id, '— starting answer phase immediately.');
+        audioFinished();
+        return;
+      }
       if(!window.speechSynthesis){ audioFinished(); return; }
       Speech.speak(t.script, { rate: 0.9, onend: audioFinished });
     }
