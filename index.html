@@ -1871,16 +1871,13 @@ const Listening = (function(){
     });
   }
 
-  function load(){
+    function load(){
     played = false;
     submitted = false;
     const t = LISTENING_TRACKS[idx];
     const body = document.getElementById('listeningBody');
     const READING_SECONDS = 60;
 
-    // Build the questions HTML once — used in both the reading phase and
-    // the answer phase, so we don't have to re-render (which would wipe
-    // any answers the learner typed in a race).
     let prevSection = null;
     let displayNum = 0;
     const questionsHtml = t.questions.map((q,i)=>{
@@ -1912,9 +1909,49 @@ const Listening = (function(){
       '<button class="btn btn-primary" id="listeningSubmitBtn" style="display:none;">Submit answers</button>' +
       '<div id="listeningResult" style="margin-top:20px;"></div>';
 
-    // Reading phase: questions visible, audio hidden, 1-minute countdown.
     const readTimer = makeTimer(READING_SECONDS, [document.getElementById('listeningReadTimer')], beginAudio);
     readTimer.start();
+
+    // Guard so endAudio runs at most once per attempt, and catches any
+    // error so a broken callback can never silently swallow the flow.
+    let endAudioRan = false;
+    function endAudio(reason){
+      if(endAudioRan) return;
+      endAudioRan = true;
+      console.log('[Listening] endAudio() called via', reason || 'unknown');
+
+      try{
+        const playerBar = document.getElementById('listenPlayerBar');
+        if(playerBar) playerBar.style.display = 'none';
+
+        const answerBanner = document.getElementById('listeningAnswerBanner');
+        if(answerBanner){
+          answerBanner.style.display = 'flex';
+          answerBanner.scrollIntoView({behavior:'smooth', block:'start'});
+        }
+
+        const submitBtn = document.getElementById('listeningSubmitBtn');
+        if(submitBtn){
+          submitBtn.style.display = 'inline-flex';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit answers';
+        }
+
+        const limitSeconds = App.examMode ? EXAM_PART_SECONDS : PRACTICE_SECONDS;
+        console.log('[Listening] starting answer timer for', limitSeconds, 'seconds');
+        timer = makeTimer(limitSeconds, [document.getElementById('listeningTimer')], ()=>{
+          if(!submitted) submit();
+        });
+        timer.start();
+        console.log('[Listening] timer.start() returned; display is now', document.getElementById('listeningTimer').textContent);
+      }catch(err){
+        console.error('[Listening] endAudio threw:', err);
+      }
+    }
+
+    // Register the handler on the window AND store a local reference, so
+    // both the direct call and any external code path can reach it.
+    window.__listenEndAudio = endAudio;
 
     function beginAudio(){
       const banner = document.getElementById('listeningReadingBanner');
@@ -1928,32 +1965,8 @@ const Listening = (function(){
         document.getElementById('listenWave').appendChild(bar);
       }
 
-      setTimeout(play, 150);
+      setTimeout(()=> play(endAudio), 150);
     }
-
-    function endAudio(){
-      const playerBar = document.getElementById('listenPlayerBar');
-      if(playerBar) playerBar.style.display = 'none';
-
-      // Tell the learner the audio is over and it's time to answer.
-      const answerBanner = document.getElementById('listeningAnswerBanner');
-      if(answerBanner) answerBanner.style.display = 'flex';
-
-      const submitBtn = document.getElementById('listeningSubmitBtn');
-      if(submitBtn){ submitBtn.style.display = 'inline-flex'; submitBtn.disabled = false; submitBtn.textContent = 'Submit answers'; }
-
-      const limitSeconds = App.examMode ? EXAM_PART_SECONDS : PRACTICE_SECONDS;
-      timer = makeTimer(limitSeconds, [document.getElementById('listeningTimer')], ()=>{
-        if(!submitted) submit();
-      });
-      timer.start();
-
-      // Bring the banner into view, so the learner notices the change
-      // even if they'd scrolled down to look at the notes.
-      if(answerBanner) answerBanner.scrollIntoView({behavior:'smooth', block:'start'});
-    }
-
-    window.__listenEndAudio = endAudio;
 
     document.getElementById('listeningSubmitBtn').addEventListener('click', submit);
     document.getElementById('listeningTrackPicker').disabled = true;
@@ -1982,69 +1995,66 @@ const Listening = (function(){
     return sectionHeader + '<div class="qblock" data-qi="'+i+'"><div class="qtext"><span class="qnum">'+(displayNum||'')+'</span>'+q.q+'</div>'+inner+'</div>';
   }
 
-   function play(){
+   function play(onEnd){
     const t = LISTENING_TRACKS[idx];
     const waveBars = document.querySelectorAll('#listenWave span');
     let waveHandle = setInterval(()=>{
       waveBars.forEach(b=>{ b.classList.toggle('live', Math.random()>0.5); b.style.height=(6+Math.random()*20)+'px'; });
     },160);
 
-    function audioFinished(){
+    let fired = false;
+    function done(reason){
+      if(fired) return;
+      fired = true;
+      console.log('[Listening] audio done via', reason);
       clearInterval(waveHandle);
       waveBars.forEach(b=>b.classList.remove('live'));
       const pill = document.getElementById('listenLivePill');
       if(pill) pill.outerHTML = '<span class="runninglabel">Audio finished — it will not play again</span>';
       played = true;
-      if(typeof window.__listenEndAudio === 'function') window.__listenEndAudio();
+      if(typeof onEnd === 'function') onEnd(reason);
     }
 
-    if(t.audio){
-      const player = new Audio(t.audio);
-      let done = false;
-      const finishOnce = (reason) => {
-        if(done) return;
-        done = true;
-        console.log('[Listening] audio finished via', reason);
-        audioFinished();
-      };
-
-      // Belt and braces: three independent triggers, so even if the
-      // browser never fires `ended` (some codecs / streams do this), the
-      // timeupdate poll catches the end of playback.
-      player.addEventListener('ended', () => finishOnce('ended-event'), {once:true});
-      player.onended = () => finishOnce('onended-prop');
-
-      player.addEventListener('timeupdate', () => {
-        if(player.duration && isFinite(player.duration)
-           && player.currentTime >= player.duration - 0.15){
-          finishOnce('timeupdate-poll');
-        }
-      });
-
-      player.addEventListener('error', ()=>{
-        console.warn('[Listening] could not load', t.audio, '— falling back.');
-        fallbackToSpeech();
-      }, {once:true});
-
-      player.play().catch((err)=>{
-        console.warn('[Listening] playback blocked:', err && err.message, '— falling back.');
-        fallbackToSpeech();
-      });
-    } else {
-      fallbackToSpeech();
+    if(!t.audio){
+      console.log('[Listening] no audio file for', t.id, '— skipping to answer phase');
+      done('no-audio');
+      return;
     }
 
-    function fallbackToSpeech(){
-      // If there's no audio AND no script, there's nothing to play — don't
-      // hang waiting for an 'ended' event that will never fire.
-      if(!t.script || !t.script.trim()){
-        console.warn('[Listening] no audio and no script for', t.id, '— starting answer phase immediately.');
-        audioFinished();
-        return;
+    const player = new Audio(t.audio);
+    player.addEventListener('loadedmetadata', ()=>{
+      console.log('[Listening] audio loaded, duration =', player.duration, 'seconds');
+    }, {once:true});
+
+    player.addEventListener('ended', ()=> done('ended-event'), {once:true});
+    player.onended = ()=> done('onended-prop');
+
+    player.addEventListener('timeupdate', ()=>{
+      if(player.duration && isFinite(player.duration)
+         && player.currentTime >= player.duration - 0.2){
+        done('timeupdate-poll');
       }
-      if(!window.speechSynthesis){ audioFinished(); return; }
-      Speech.speak(t.script, { rate: 0.9, onend: audioFinished });
-    }
+    });
+
+    // Last-resort safety net: if the audio metadata says it's N seconds
+    // long and neither `ended` nor the timeupdate poll fires, force the
+    // transition after N+3 seconds of wall-clock time.
+    player.addEventListener('loadedmetadata', ()=>{
+      const dur = player.duration;
+      if(dur && isFinite(dur)){
+        setTimeout(()=> done('duration-timeout'), (dur + 3) * 1000);
+      }
+    }, {once:true});
+
+    player.addEventListener('error', ()=>{
+      console.warn('[Listening] audio failed to load', t.audio);
+      done('load-error');
+    }, {once:true});
+
+    player.play().catch((err)=>{
+      console.warn('[Listening] playback blocked:', err && err.message);
+      done('play-blocked');
+    });
   }
 
   function submit(){
