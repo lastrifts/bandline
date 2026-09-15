@@ -1906,7 +1906,7 @@ const Listening = (function(){
     const t = LISTENING_TRACKS[idx];
     renderPrepScreen(document.getElementById('listeningBody'), {
       title: t.title,
-      meta: '<span class="tag">'+LEVEL_LABELS[t.level]+' difficulty</span> · '+Math.round(EXAM_SECONDS/60)+' minutes · '+t.questions.length + ' questions',
+      meta: '<span class="tag">'+LEVEL_LABELS[t.level]+'</span> · '+Math.round(EXAM_SECONDS/60)+' minutes · '+t.questions.length + ' questions',
       tips: [
         'You get 30 minutes total, just like the real test — the clock starts the moment you press start and cannot be paused.',
         'The audio plays through your browser\'s spoken-voice engine, once only — there is no pause, rewind or replay button, just like the real test.',
