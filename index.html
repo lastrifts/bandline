@@ -126,10 +126,10 @@
   .view.active{display:block; animation:fadein .38s var(--ease);}
   @keyframes fadein{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
 
-  .pagehead{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:28px; max-width:900px; animation:fadein .4s var(--ease) both;}
+  .pagehead{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:28px; max-width:100%; animation:fadein .4s var(--ease) both;}
   .pagehead h1{font-family:var(--font-serif); font-size:2rem; font-weight:600; margin:0 0 6px;}
   .pagehead p{margin:0; color:var(--ink-soft); font-size:0.92rem; max-width:56ch;}
-  .contentwrap{max-width:900px; animation:fadein .45s .04s var(--ease) both;}
+  .contentwrap{max-width:100%; animation:fadein .45s .04s var(--ease) both;}
 
   /* ---------- Reusable bits ---------- */
   .card{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-m); padding:22px 24px;}
@@ -164,7 +164,7 @@
   .banner-warn{background:var(--gold-tint); color:#8A5B0F;}
 
   /* ---------- Prep / exam-gate screen ---------- */
-  .prepcard{max-width:640px;}
+  .prepcard{max-width:100%;}
   .prepcard h2{font-family:var(--font-serif); font-size:1.3rem; margin:0 0 4px;}
   .prepcard .prepmeta{font-size:0.86rem; color:var(--ink-soft); margin:0 0 4px;}
   .preptips{margin:16px 0 0; padding:0; list-style:none;}
@@ -196,7 +196,7 @@
   .modal-opt:hover{border-color:var(--jade); background:var(--jade-tint);}
 
   /* ---------- Dashboard ---------- */
-  .bento{display:grid; grid-template-columns:repeat(6, 1fr); gap:16px; max-width:1120px;}
+  .bento{display:grid; grid-template-columns:repeat(6, 1fr); gap:16px; max-width:100%;}
   .b-tile{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius-m); padding:20px 22px; animation:fadein .45s var(--ease) both; transition:box-shadow .2s ease, transform .2s ease;}
   .b-tile:hover{box-shadow:var(--shadow-soft); transform:translateY(-1px);}
   .bento .b-tile:nth-child(1){animation-delay:.02s;}
@@ -236,7 +236,7 @@
   .seal span{font-size:0.62rem; color:var(--ink-soft); line-height:1.2;}
   .chartbox{height:210px;}
   .empty-state{color:var(--ink-faint); font-size:0.86rem; padding:10px 0;}
-  .disclaimer{max-width:900px; margin-top:8px; font-size:0.74rem; color:var(--ink-faint);}
+  .disclaimer{max-width:100%; margin-top:8px; font-size:0.74rem; color:var(--ink-faint);}
   .examtimes-table{width:100%; border-collapse:collapse; font-size:0.9rem;}
   .examtimes-table td{padding:11px 4px; border-bottom:1px solid var(--line);}
   .examtimes-table tr:last-child td{border-bottom:none;}
@@ -328,7 +328,7 @@
   .wave span.live{background:var(--jade);}
 
   /* ---------- Spelling ---------- */
-  .spelling-card{max-width:640px;}
+  .spelling-card{max-width:100%;}
   .spelling-wordbox{background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:28px; text-align:center;}
   .spelling-status{font-size:0.8rem; color:var(--ink-faint); margin-bottom:8px;}
   .spelling-listen{width:58px; height:58px; border-radius:50%; border:none; background:var(--jade); color:#fff; display:inline-flex; align-items:center; justify-content:center; margin:8px 0 20px;}
