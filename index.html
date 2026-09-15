@@ -2265,14 +2265,11 @@ const Speaking = (function(){
 const Spelling = (function(){
   let words = [];
   let currentIndex = 0;
-  let timer = null;
-  let duration = 60;
   let correct = 0;
   let attempted = 0;
   let active = false;
   let finished = false;
   let currentWord = '';
-  let lastSpoken = '';
 
   function init(){
     renderPrep();
@@ -2285,14 +2282,19 @@ const Spelling = (function(){
     const label = difficulty()==='easy' ? 'Easy' : 'Standard';
     document.getElementById('spellingDifficultyTag').textContent = label;
     document.getElementById('spellingProgressTag').textContent = '0 words';
+    // No timer in this mode — hide the clock entirely.
+    const timerEl = document.getElementById('spellingTimer');
+    if(timerEl) timerEl.style.display = 'none';
+
     body.innerHTML =
       '<div class="card prepcard spelling-card">' +
         '<h2>Spelling practice</h2>' +
-        '<p class="prepmeta">'+label+' words · 1-minute challenge</p>' +
+        '<p class="prepmeta">'+label+' words · no time limit</p>' +
         '<ul class="preptips">' +
-          '<li>'+ICO.check+'<span>You will hear a different English word one at a time.</span></li>' +
-          '<li>'+ICO.check+'<span>Type the spelling you think you heard, then press <strong>Check</strong> or Enter.</span></li>' +
-          '<li>'+ICO.check+'<span>Keep going until the timer reaches zero. Your score is based on correct spellings.</span></li>' +
+          '<li>'+ICO.check+'<span>You will hear an English word. Type the spelling you think you heard.</span></li>' +
+          '<li>'+ICO.check+'<span>Press <strong>Check</strong> or Enter to see whether you got it right.</span></li>' +
+          '<li>'+ICO.check+'<span>If you get it wrong, the correct spelling is shown and you click <strong>Next word</strong> when you are ready to move on.</span></li>' +
+          '<li>'+ICO.check+'<span>Work through as many words as you like, then click <strong>Finish</strong> to see your score.</span></li>' +
         '</ul>' +
         '<div class="prepstart-row"><button class="btn btn-primary prepStartBtn">Start spelling</button></div>' +
       '</div>';
@@ -2307,11 +2309,8 @@ const Spelling = (function(){
     attempted = 0;
     active = true;
     finished = false;
-    duration = 60;
-    timer = makeTimer(duration, [document.getElementById('spellingTimer')], finish);
     lockNav('spelling');
     renderRound();
-    timer.start();
     speakCurrent();
   }
 
@@ -2337,10 +2336,16 @@ const Spelling = (function(){
         '</div>' +
         '<div class="row" style="justify-content:center; margin-top:18px;">' +
           '<button class="btn btn-primary" id="spellingCheckBtn">Check</button>' +
+          '<button class="btn btn-ghost" id="spellingSkipBtn">Skip</button>' +
+        '</div>' +
+        '<div class="row" style="justify-content:center; margin-top:10px;">' +
+          '<button class="btn btn-danger btn-sm" id="spellingFinishBtn">Finish practice</button>' +
         '</div>' +
       '</div>';
     document.getElementById('spellingListenBtn').addEventListener('click', speakCurrent);
     document.getElementById('spellingCheckBtn').addEventListener('click', check);
+    document.getElementById('spellingSkipBtn').addEventListener('click', skip);
+    document.getElementById('spellingFinishBtn').addEventListener('click', finish);
     const input = document.getElementById('spellingInput');
     input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); check(); } });
     input.focus();
@@ -2348,7 +2353,6 @@ const Spelling = (function(){
 
   function speakCurrent(){
     if(!active || finished) return;
-    lastSpoken = currentWord;
     if(window.speechSynthesis){
       Speech.speak(currentWord, {rate:0.82});
     } else {
@@ -2368,6 +2372,7 @@ const Spelling = (function(){
     attempted++;
     const isCorrect = answer === expected;
     if(isCorrect) correct++;
+
     const feedback = document.getElementById('spellingFeedback');
     if(feedback){
       feedback.className = 'spelling-feedback '+(isCorrect?'correct':'incorrect');
@@ -2377,13 +2382,37 @@ const Spelling = (function(){
     document.getElementById('spellingAccuracy').textContent = accuracy()+'%';
     document.getElementById('spellingProgressTag').textContent = attempted + ' words';
     input.disabled = true;
-    document.getElementById('spellingCheckBtn').disabled = true;
-    setTimeout(()=>{
-      if(!active || finished) return;
-      currentIndex++;
-      renderRound();
-      speakCurrent();
-    }, 550);
+
+    // Replace the Check/Skip buttons with a single "Next word" button, so
+    // the learner has to actively click to advance instead of the round
+    // auto-advancing after a short delay.
+    const row = document.querySelector('#spellingBody .row');
+    row.innerHTML = '<button class="btn btn-primary" id="spellingNextBtn">Next word</button>';
+    document.getElementById('spellingNextBtn').addEventListener('click', next, {once:true});
+  }
+
+  function skip(){
+    if(!active || finished) return;
+    attempted++;
+    const feedback = document.getElementById('spellingFeedback');
+    if(feedback){
+      feedback.className = 'spelling-feedback incorrect';
+      feedback.textContent = 'Correct spelling: '+currentWord;
+    }
+    document.getElementById('spellingAccuracy').textContent = accuracy()+'%';
+    document.getElementById('spellingProgressTag').textContent = attempted + ' words';
+    const input = document.getElementById('spellingInput');
+    if(input) input.disabled = true;
+    const row = document.querySelector('#spellingBody .row');
+    row.innerHTML = '<button class="btn btn-primary" id="spellingNextBtn">Next word</button>';
+    document.getElementById('spellingNextBtn').addEventListener('click', next, {once:true});
+  }
+
+  function next(){
+    if(!active || finished) return;
+    currentIndex++;
+    renderRound();
+    speakCurrent();
   }
 
   function finish(){
@@ -2391,18 +2420,17 @@ const Spelling = (function(){
     finished = true;
     active = false;
     if(window.speechSynthesis) window.speechSynthesis.cancel();
-    if(timer) timer.pause();
     const pct = accuracy();
     document.getElementById('spellingProgressTag').textContent = attempted + ' words';
     document.getElementById('spellingBody').innerHTML =
       '<div class="card spelling-card">' +
         '<div class="resultbig"><span class="n">'+correct+'</span><span>/ '+attempted+' correct ('+pct+'%)</span></div>' +
-        '<p class="hint" style="margin-top:8px;">You completed '+attempted+' word'+(attempted===1?'':'s')+' in one minute.</p>' +
+        '<p class="hint" style="margin-top:8px;">You worked through '+attempted+' word'+(attempted===1?'':'s')+'.</p>' +
         '<div class="prepstart-row"><button class="btn btn-primary" id="spellingAgainBtn">Practice again</button></div>' +
       '</div>';
     document.getElementById('spellingAgainBtn').addEventListener('click', renderPrep, {once:true});
     unlockNav();
-    Store.push('stats:spelling', {date:todayISO(), difficulty:difficulty(), correct, total:attempted, pct, timeSec:duration});
+    Store.push('stats:spelling', {date:todayISO(), difficulty:difficulty(), correct, total:attempted, pct});
   }
 
   return { init, refresh: renderPrep };
