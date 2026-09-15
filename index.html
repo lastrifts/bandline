@@ -1157,7 +1157,7 @@ const ICO = {
    ========================================================================= */
 const READING_PASSAGES = [
   {
-    id:'yawning', title:'Why We Yawn', timeLimit:1200, level:0,
+    id:'yawning', title:'Passage 1 · Why We Yawn', timeLimit:1200, level:0,
     paragraphs:[
       "Almost every person yawns every day, and so do many other animals, including dogs, cats and even fish. A yawn is a deep breath in, followed by a slower breath out, usually together with a stretch of the jaw. Yawning often happens when we are tired, bored, or getting ready to sleep, but it also happens at other times that are harder to explain.",
       "For many years, scientists believed that yawning was the body's way of getting more oxygen into the blood. This idea made sense at first, but later experiments found little support for it: people who were given extra oxygen to breathe still yawned just as often as people who were not.",
@@ -1174,7 +1174,7 @@ const READING_PASSAGES = [
     ]
   },
   {
-    id:'bees', title:'The Silent Language of Bees', timeLimit:1200, level:1,
+        id:'bees', title:'Passage 2 · The Silent Language of Bees', timeLimit:1200, level:1,
     paragraphs:[
       "When a foraging honeybee returns to the hive after finding a rich source of nectar, she does not simply rest. Instead, she performs a small, repetitive dance on the honeycomb, moving in a tight figure of eight while vibrating her body from side to side. Nearby workers cluster around her, touching her with their antennae, and within minutes several of them fly off in the exact direction she indicated, often travelling several kilometres to the same flowers.",
       "This behaviour, known as the waggle dance, was first decoded in detail by the Austrian zoologist Karl von Frisch in the middle of the twentieth century. Von Frisch found that the angle of the dancer's body relative to vertical corresponds to the angle between the sun and the food source, while the duration of the waggling portion of the dance encodes distance: roughly one second of waggling for every kilometre travelled. The discovery earned him a share of the Nobel Prize in 1973 and remains one of the most celebrated examples of symbolic communication outside human language.",
@@ -1193,7 +1193,7 @@ const READING_PASSAGES = [
     ]
   },
   {
-    id:'vertical-farming', title:'Growing Upwards: The Rise of Vertical Farming', timeLimit:1200, level:1,
+      id:'vertical-farming', title:'Passage 3 · Growing Upwards: The Rise of Vertical Farming', timeLimit:1200, level:1,
     paragraphs:[
       "On the outskirts of several major cities, disused warehouses have been quietly transformed into some of the most productive farmland on the planet — without a single field in sight. Inside, crops are stacked in tall racks under pink-tinged LED lighting, their roots bathed not in soil but in a thin, nutrient-rich mist. This is vertical farming, an approach to agriculture that trades horizontal acreage for vertical space, and it is increasingly being pitched as a partial answer to the problem of feeding growing urban populations.",
       "The appeal is straightforward. A vertical farm can produce far more food per square metre of land than a conventional field, since growing trays can be stacked ten, twenty, or even forty layers high. Because the growing environment is fully enclosed, water use can be reduced dramatically compared with open-field agriculture, in some cases by more than ninety per cent, since moisture that would otherwise evaporate or run off is instead captured and recycled. Pesticides become largely unnecessary too, as the sealed environment keeps most pests out entirely.",
@@ -1215,7 +1215,7 @@ const READING_PASSAGES = [
 
 const LISTENING_TRACKS = [
   {
-    id:'campsite', title:'Section 1 · Booking a Campsite', level:0,
+    id:'campsite', title:'Part 1 · Booking a Campsite', level:0,
     script:"Good morning, Pine Ridge Campsite, how can I help? Hi, I'd like to book a pitch for a tent for the last weekend of July, so that's the twenty sixth to the twenty eighth. Sure, let me check. Yes, we have space. Can I take your name please? It's Daniela Ruiz, that's R U Z spelt R-U-I-Z. Thanks Daniela. And a contact number? It's oh seven nine one two, double three, four four one nine. Got it. Will you need electricity hook-up? Yes please, that's an extra four pounds fifty per night. That's fine. And how many people in your party? Three adults and one child. Great, the total for two nights including hook-up comes to sixty three pounds. You can pay a twenty pound deposit now by card and the rest on arrival. Perfect, I'll do that now.",
     questions:[
       {type:'fill', q:'Customer\'s first name: ____________', answer:'Daniela'},
@@ -1226,7 +1226,7 @@ const LISTENING_TRACKS = [
     ]
   },
   {
-    id:'orientation', title:'Section 4 · Library Orientation Talk', level:1,
+    id:'orientation', title:'Part 4 · Library Orientation Talk', level:1,
     script:"Welcome to the university library. I'll run through a few key things before your tour. The main library is open from eight in the morning until eleven at night on weekdays, and from ten until six at weekends. Undergraduate students may borrow up to eight books at a time for a period of three weeks, while postgraduate students may borrow up to fifteen books for four weeks. There is a quiet study floor on level three where talking and phone calls are not permitted at all, and a group study floor on level two where you can book a room in advance online. If a book you need is already out on loan, you can place a hold through the catalogue and you'll receive an email when it becomes available. Finally, printing costs five pence per page in black and white and twenty pence per page in colour, and you can top up your printing account at the machines near the entrance.",
     questions:[
       {type:'fill', q:'Weekday opening hours: 8 am to ____________ pm', answer:'11'},
@@ -1234,6 +1234,28 @@ const LISTENING_TRACKS = [
       {type:'fill', q:'Postgraduates may borrow books for ____________ weeks.', answer:'four'},
       {type:'mcq', q:'Which floor is designated for silent study?', options:['Level one','Level two','Level three','Ground floor'], answer:2},
       {type:'fill', q:'Colour printing costs ____________ pence per page.', answer:'20'}
+    ]
+  },
+  {
+    id:'citytour', title:'Part 2 · City Walking Tour Introduction', level:0,
+    script:"Hello everyone, and welcome to the historic quarter of the city. My name is Marcus and I'll be your guide for the next ninety minutes. Before we set off, a few practical points. We'll be walking approximately two kilometres, mostly on flat ground, but there are a few cobbled streets so please do watch your step. The tour costs twelve pounds per adult, and children under ten go free. We finish outside the old railway station, where there are plenty of cafes if you'd like to stop for lunch afterwards. Our first stop is the cathedral, which was built in the fourteenth century and took over two hundred years to complete. Please stay together as a group, and if you have any questions at any point, just ask.",
+    questions:[
+      {type:'fill', q:'Tour duration: ____________ minutes', answer:'90'},
+      {type:'fill', q:'The tour costs £____________ per adult.', answer:'12'},
+      {type:'mcq', q:'Where does the tour finish?', options:['At the cathedral','Outside the old railway station','At the city museum','In the market square'], answer:1},
+      {type:'fill', q:'The cathedral was built in the ____________ century.', answer:'fourteenth'},
+      {type:'mcq', q:'Children under what age go free?', options:['Five','Ten','Twelve','Sixteen'], answer:1}
+    ]
+  },
+  {
+    id:'project', title:'Part 3 · Tutorial: Research Project', level:1,
+    script:"So, how's the research project coming along, Priya? It's going well, thanks. I've finished the literature review and I'm halfway through the data collection. Good. And have you decided on your methodology for the second phase? Yes, I'm going to use semi-structured interviews rather than questionnaires, because I think the topic needs more depth than a survey would allow. Sensible choice. Just remember to get ethics approval before you start recording. Of course, I submitted the form last week. How many participants are you aiming for? I'd like at least fifteen, but I'll keep going until I reach saturation. That's ambitious but realistic. And when is your first draft due? The supervisor wants it by the fifteenth of March, so I've got about four weeks. Plenty of time if you stay organised.",
+    questions:[
+      {type:'mcq', q:'Which method will Priya use in the second phase?', options:['Questionnaires','Semi-structured interviews','Focus groups','Observation'], answer:1},
+      {type:'fill', q:'Priya must get ____________ approval before recording.', answer:'ethics'},
+      {type:'fill', q:'She aims for at least ____________ participants.', answer:'fifteen'},
+      {type:'fill', q:'First draft due: ____________ March', answer:'15th'},
+      {type:'mcq', q:'How does the supervisor describe her target number of participants?', options:['Unrealistic','Ambitious but realistic','Too low','Unnecessary'], answer:1}
     ]
   }
 ];
@@ -1326,7 +1348,7 @@ const Reading = (function(){
     levelIdx = clampLevel(await Profile.get('profile:readingLevel', 1), 1);
     idx = indexForLevel(READING_PASSAGES, levelIdx);
     const picker = document.getElementById('readingPassagePicker');
-    picker.innerHTML = READING_PASSAGES.map((p,i)=>'<option value="'+i+'">'+(i+1)+'. '+p.title+' — '+LEVEL_LABELS[p.level]+'</option>').join('');
+    picker.innerHTML = READING_PASSAGES.map((p,i)=>'<option value="'+i+'">'+(i+1)+'. '+p.title+'</option>').join('');
     picker.value = String(idx);
     picker.addEventListener('change', ()=>{ idx = Number(picker.value); levelIdx = READING_PASSAGES[idx].level; showPrep(); });
     document.getElementById('readingTimer').textContent = fmtTime(READING_PASSAGES[idx].timeLimit);
@@ -1524,7 +1546,7 @@ const Writing = (function(){
     if(!App.examMode && App.practiceMode==='easy'){
       return t===1 ? {seconds:1200, minWords:120} : {seconds:1800, minWords:200};
     }
-    return t===1 ? {seconds:1500, minWords:150} : {seconds:2400, minWords:250};
+    return t===1 ? {seconds:1200, minWords:150} : {seconds:2400, minWords:250};
   }
 
   function init(){
@@ -1741,9 +1763,9 @@ const Listening = (function(){
 
   async function init(){
     levelIdx = clampLevel(await Profile.get('profile:listeningLevel', 0), 1);
-    idx = indexForLevel(LISTENING_TRACKS, levelIdx);
+    idx = 0;
     const picker = document.getElementById('listeningTrackPicker');
-    picker.innerHTML = LISTENING_TRACKS.map((t,i)=>'<option value="'+i+'">'+(i+1)+'. '+t.title+' — '+LEVEL_LABELS[t.level]+'</option>').join('');
+    picker.innerHTML = LISTENING_TRACKS.map((t,i)=>'<option value="'+i+'">'+(i+1)+'. '+t.title+'</option>').join('');
     picker.value = String(idx);
     picker.addEventListener('change', ()=>{ idx = Number(picker.value); levelIdx = LISTENING_TRACKS[idx].level; showPrep(); });
     showPrep();
