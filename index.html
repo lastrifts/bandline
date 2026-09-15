@@ -326,6 +326,12 @@
   .wave{flex:1; height:26px; display:flex; align-items:center; gap:2px; overflow:hidden;}
   .wave span{width:3px; background:#4C5F80; border-radius:2px; flex-shrink:0;}
   .wave span.live{background:var(--jade);}
+  .qintro{font-style:italic; color:var(--ink-soft); font-size:0.9rem; margin-bottom:12px;}
+.qgrouptitle{font-family:var(--font-serif); font-size:1.1rem; font-weight:600; margin:0 0 10px;}
+.qheader{font-size:0.9rem; font-weight:600; margin-bottom:10px;}
+.qsection{font-family:var(--font-sans); font-size:0.88rem; font-weight:600; color:var(--ink); margin:18px 0 8px;}
+.qblock.qstatic{margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed var(--line);}
+.qblock.qstatic:last-child{border-bottom:none;}
 
   /* ---------- Spelling ---------- */
   .spelling-card{max-width:100%;}
@@ -548,7 +554,7 @@
       <div class="pagehead">
         <div>
           <h1>Listening</h1>
-          <p>The audio, spoken aloud by your browser, plays once automatically after you start — then answer the questions.</p>
+          <p>The recording plays once automatically after you start — then answer the questions. Just like the real test, there's no pause or replay.</p>
         </div>
       </div>
       <div class="contentwrap">
@@ -1215,47 +1221,87 @@ const READING_PASSAGES = [
 
 const LISTENING_TRACKS = [
   {
-    id:'campsite', title:'Part 1 · Booking a Campsite', level:0,
-    script:"Good morning, Pine Ridge Campsite, how can I help? Hi, I'd like to book a pitch for a tent for the last weekend of July, so that's the twenty sixth to the twenty eighth. Sure, let me check. Yes, we have space. Can I take your name please? It's Daniela Ruiz, that's R U Z spelt R-U-I-Z. Thanks Daniela. And a contact number? It's oh seven nine one two, double three, four four one nine. Got it. Will you need electricity hook-up? Yes please, that's an extra four pounds fifty per night. That's fine. And how many people in your party? Three adults and one child. Great, the total for two nights including hook-up comes to sixty three pounds. You can pay a twenty pound deposit now by card and the rest on arrival. Perfect, I'll do that now.",
+    id:'salt', title:'Part 1 · The Early History of Salt', level:0,
+    audio:'audio/salt.mp3',
+    script:"",
+    intro:'Questions 1–10. Complete the notes below. Write ONE WORD ONLY for each answer.',
+    groupTitle:'The Early History of Salt',
     questions:[
-      {type:'fill', q:'Customer\'s first name: ____________', answer:'Daniela'},
-      {type:'fill', q:'Booking dates: 26th to ____________ July', answer:'28th'},
-      {type:'mcq', q:'How many people are in the party?', options:['Two','Three','Four','Five'], answer:2},
-      {type:'fill', q:'Extra cost for electricity hook-up per night: £____________', answer:'4.50'},
-      {type:'mcq', q:'How much deposit is required today?', options:['£4.50','£20','£63','£28'], answer:1}
+      {type:'fill', section:'Introduction', q:'Salt is essential for human ____________.', answer:'health'},
+      {type:'fill', section:'Ancient Rome', q:'The word ____________ comes from the Latin word \'salarium argentum\', which was used to describe the payment to Roman soldiers.', answer:'salary'},
+      {type:'fill', section:'Ancient Sweden', q:'Animals were kept in the local ____________ at the right time of year.', answer:'forest'},
+      {type:'fill', section:'Ancient Sweden', q:'Fresh meat was only available in ____________.', answer:'October'},
+      {type:'fill', section:'Ancient Sweden', q:'Salt has been used widely: we can tell from the diet of the ____________ in Sweden.', answer:'king'},
+      {type:'fill', section:'Ancient Sweden', q:'____________ consumption increased rapidly because the food was much too salty.', answer:'beer'},
+      {type:'fill', section:'Salt source', q:'People mainly extract salt from oceans and ____________ in the basins.', answer:'deserts'},
+      {type:'fill', section:'Salt source', q:'Salt from spring water is more ____________ and purer compared to that from sea water.', answer:'concentrated'},
+      {type:'fill', section:'Salt distribution', q:'Locals needed to protect the ____________ by which they imported salt.', answer:'shipping'},
+      {type:'fill', section:'Salt distribution', q:'People carrying salt around were seen as a natural means of ____________.', answer:'transport'}
     ]
   },
   {
-    id:'orientation', title:'Part 4 · Library Orientation Talk', level:1,
-    script:"Welcome to the university library. I'll run through a few key things before your tour. The main library is open from eight in the morning until eleven at night on weekdays, and from ten until six at weekends. Undergraduate students may borrow up to eight books at a time for a period of three weeks, while postgraduate students may borrow up to fifteen books for four weeks. There is a quiet study floor on level three where talking and phone calls are not permitted at all, and a group study floor on level two where you can book a room in advance online. If a book you need is already out on loan, you can place a hold through the catalogue and you'll receive an email when it becomes available. Finally, printing costs five pence per page in black and white and twenty pence per page in colour, and you can top up your printing account at the machines near the entrance.",
+    id:'spiritbear', title:'Part 4 · The Spirit Bear', level:1,
+    audio:'audio/spiritbear.mp3',
+    script:"",
+    intro:'Questions 1–10. Complete the notes below. Write ONE WORD ONLY for each answer.',
+    groupTitle:'THE SPIRIT BEAR',
     questions:[
-      {type:'fill', q:'Weekday opening hours: 8 am to ____________ pm', answer:'11'},
-      {type:'mcq', q:'How many books can an undergraduate borrow at once?', options:['Three','Eight','Fifteen','Twenty'], answer:1},
-      {type:'fill', q:'Postgraduates may borrow books for ____________ weeks.', answer:'four'},
-      {type:'mcq', q:'Which floor is designated for silent study?', options:['Level one','Level two','Level three','Ground floor'], answer:2},
-      {type:'fill', q:'Colour printing costs ____________ pence per page.', answer:'20'}
+      {type:'fill', section:'General facts', q:'It is a white bear belonging to the black bear family.', answer:'', skip:true},
+      {type:'fill', section:'General facts', q:'Its colour comes from an uncommon ____________.', answer:'gene'},
+      {type:'fill', section:'General facts', q:'Local people believe that it has unusual ____________.', answer:'power', alt:['powers']},
+      {type:'fill', section:'General facts', q:'They protect the bear from ____________.', answer:'strangers'},
+      {type:'fill', section:'Habitat', q:'The bear\'s relationship with the forest is complex.', answer:'', skip:true},
+      {type:'fill', section:'Habitat', q:'Tree roots stop ____________ along salmon streams.', answer:'erosion'},
+      {type:'fill', section:'Habitat', q:'The bears\' feeding habits provide nutrients for forest vegetation.', answer:'', skip:true},
+      {type:'fill', section:'Habitat', q:'It is currently found on a small number of ____________.', answer:'islands'},
+      {type:'fill', section:'Threats', q:'Habitat is being lost due to deforestation and construction of ____________ by logging companies.', answer:'roads'},
+      {type:'fill', section:'Threats', q:'Unrestricted ____________ is affecting the salmon supply.', answer:'fishing'},
+      {type:'fill', section:'Threats', q:'The bears\' existence is also threatened by their low rate of ____________.', answer:'reproduction'},
+      {type:'fill', section:'Going forward', q:'Interested parties are working together.', answer:'', skip:true},
+      {type:'fill', section:'Going forward', q:'Logging companies must improve their ____________ of logging.', answer:'method', alt:['methods']},
+      {type:'fill', section:'Going forward', q:'Maintenance and ____________ of the spirit bears\' territory is needed.', answer:'expansion'}
     ]
   },
   {
-    id:'citytour', title:'Part 2 · City Walking Tour Introduction', level:0,
-    script:"Hello everyone, and welcome to the historic quarter of the city. My name is Marcus and I'll be your guide for the next ninety minutes. Before we set off, a few practical points. We'll be walking approximately two kilometres, mostly on flat ground, but there are a few cobbled streets so please do watch your step. The tour costs twelve pounds per adult, and children under ten go free. We finish outside the old railway station, where there are plenty of cafes if you'd like to stop for lunch afterwards. Our first stop is the cathedral, which was built in the fourteenth century and took over two hundred years to complete. Please stay together as a group, and if you have any questions at any point, just ask.",
+    id:'buildingwork', title:'Part 2 · Building Work', level:0,
+    audio:'audio/buildingwork.mp3',
+    script:"",
+    intro:'Questions 1–10. Complete the notes below.',
+    groupTitle:'Building Work',
+    header:'Address: 15 Hill Street',
     questions:[
-      {type:'fill', q:'Tour duration: ____________ minutes', answer:'90'},
-      {type:'fill', q:'The tour costs £____________ per adult.', answer:'12'},
-      {type:'mcq', q:'Where does the tour finish?', options:['At the cathedral','Outside the old railway station','At the city museum','In the market square'], answer:1},
-      {type:'fill', q:'The cathedral was built in the ____________ century.', answer:'fourteenth'},
-      {type:'mcq', q:'Children under what age go free?', options:['Five','Ten','Twelve','Sixteen'], answer:1}
+      {type:'fill', section:'Contact Information', q:'Name: Sally ____________', answer:'Keyworth'},
+      {type:'fill', section:'Contact Information', q:'Phone: 027 584 6613', answer:'', skip:true},
+      {type:'fill', section:'Kitchen', q:'Needs a bigger window', answer:'', skip:true},
+      {type:'fill', section:'Kitchen', q:'The kitchen is too hot - fit a ____________', answer:'fan'},
+      {type:'fill', section:'Bathroom', q:'put a ____________ on the back wall', answer:'shower'},
+      {type:'fill', section:'Bathroom', q:'decide the ____________ of the small tiles later.', answer:'color', alt:['colour']},
+      {type:'fill', section:'Outside', q:'put a higher ____________ in the garden.', answer:'gate'},
+      {type:'fill', section:'Outside', q:'put a new ____________ on the garage door.', answer:'lock'},
+      {type:'fill', section:'Outside', q:'fix the roof - it was damaged by a ____________', answer:'storm'},
+      {type:'fill', section:'Outside', q:'fit a new rain gutter made of ____________', answer:'plastic'},
+      {type:'fill', section:'Other information', q:'Start date: ____________', answer:'8th May', alt:['8 May','May 8th','May 8']},
+      {type:'fill', section:'Other information', q:'Security code: ____________', answer:'AG4176'}
     ]
   },
-  {
-    id:'project', title:'Part 3 · Tutorial: Research Project', level:1,
-    script:"So, how's the research project coming along, Priya? It's going well, thanks. I've finished the literature review and I'm halfway through the data collection. Good. And have you decided on your methodology for the second phase? Yes, I'm going to use semi-structured interviews rather than questionnaires, because I think the topic needs more depth than a survey would allow. Sensible choice. Just remember to get ethics approval before you start recording. Of course, I submitted the form last week. How many participants are you aiming for? I'd like at least fifteen, but I'll keep going until I reach saturation. That's ambitious but realistic. And when is your first draft due? The supervisor wants it by the fifteenth of March, so I've got about four weeks. Plenty of time if you stay organised.",
+   {
+    id:'holidayrentals', title:'Part 3 · Holiday Rentals', level:1,
+    audio:'audio/holidayrentals.mp3',
+    script:"",
+    intro:'Questions 1–10. Complete the table below. Write ONE WORD AND/OR A NUMBER for each answer.',
+    groupTitle:'HOLIDAY RENTALS',
+    header:'Dates: 10th–22nd July (Example)',
     questions:[
-      {type:'mcq', q:'Which method will Priya use in the second phase?', options:['Questionnaires','Semi-structured interviews','Focus groups','Observation'], answer:1},
-      {type:'fill', q:'Priya must get ____________ approval before recording.', answer:'ethics'},
-      {type:'fill', q:'She aims for at least ____________ participants.', answer:'fifteen'},
-      {type:'fill', q:'First draft due: ____________ March', answer:'15th'},
-      {type:'mcq', q:'How does the supervisor describe her target number of participants?', options:['Unrealistic','Ambitious but realistic','Too low','Unnecessary'], answer:1}
+      {type:'fill', section:'Property 1 — Location: rural · surrounded by ____________', q:'1. Name of property: ____________', answer:'Moonfleet'},
+      {type:'fill', section:'Property 1 — Location', q:'surrounded by ____________', answer:'fields'},
+      {type:'fill', section:'Property 1 — Disadvantage', q:'distance from ____________', answer:'shops'},
+      {type:'fill', section:'Property 1 — Booking details', q:'www.____________.com', answer:'summerhouses'},
+      {type:'fill', section:'Property 2 — Kingfisher · Location', q:'next to the ____________', answer:'river'},
+      {type:'fill', section:'Property 2 — Features', q:'____________ room', answer:'dining'},
+      {type:'fill', section:'Property 3 — Sunnybanks · Location', q:'next to the ____________', answer:'sea'},
+      {type:'fill', section:'Property 3 — Features', q:'has private ____________', answer:'garden'},
+      {type:'fill', section:'Property 3 — Disadvantage', q:'no ____________', answer:'parking'},
+      {type:'fill', section:'Property 3 — Booking details', q:'Contact the ____________', answer:'agent'}
     ]
   }
 ];
@@ -1473,7 +1519,8 @@ const Reading = (function(){
       } else {
         const inp = block.querySelector('input');
         userVal = inp.value.trim();
-        correct = userVal.toLowerCase() === String(q.answer).toLowerCase();
+        const accepted = [String(q.answer)].concat(q.alt || []).map(a=>a.toLowerCase().trim());
+        correct = accepted.includes(userVal.toLowerCase());
       }
       if(correct) score++;
       // In exam mode, don't reveal which answers were right or wrong —
@@ -1834,7 +1881,19 @@ const Listening = (function(){
     }
 
     const qwrap = document.getElementById('listeningQuestions');
-    qwrap.innerHTML = t.questions.map((q,i)=>renderQ(q,i)).join('');
+    let prevSection = null;
+    let displayNum = 0;
+    const questionsHtml = t.questions.map((q,i)=>{
+      const num = q.skip ? null : (++displayNum);
+      const html = renderQ(q, i, prevSection, num);
+      if(q.section) prevSection = q.section;
+      return html;
+    }).join('');
+    qwrap.innerHTML =
+      (t.intro ? '<div class="qintro">'+t.intro+'</div>' : '') +
+      (t.groupTitle ? '<h3 class="qgrouptitle">'+t.groupTitle+'</h3>' : '') +
+      (t.header ? '<div class="qheader">'+t.header+'</div>' : '') +
+      questionsHtml;
 
     document.getElementById('listeningSubmitBtn').addEventListener('click', submit);
     document.getElementById('listeningTrackPicker').disabled = true;
@@ -1843,43 +1902,61 @@ const Listening = (function(){
     play();
   }
 
-  function renderQ(q,i){
+  function renderQ(q,i,prevSection,displayNum){
     let inner = '';
     if(q.type==='mcq'){
       inner = '<div class="options">' + q.options.map((o,oi)=>
         '<label class="optlabel"><input type="radio" name="lq'+i+'" value="'+oi+'">'+o+'</label>').join('') + '</div>';
+    } else if(q.skip){
+      // Static line from the notes — render as plain text, no input.
+      return (q.section && q.section !== prevSection ? '<h4 class="qsection">'+q.section+'</h4>' : '') +
+        '<div class="qblock qstatic" data-qi="'+i+'"><div class="qtext" style="font-weight:400; color:var(--ink-soft);"><span class="qnum" style="background:var(--line-strong);">•</span>'+q.q+'</div></div>';
     } else {
       inner = '<input class="fillinput" type="text" name="lq'+i+'" placeholder="Your answer">';
     }
-    return '<div class="qblock" data-qi="'+i+'"><div class="qtext"><span class="qnum">'+(i+1)+'</span>'+q.q+'</div>'+inner+'</div>';
+    let sectionHeader = '';
+    if(q.section && q.section !== prevSection){
+      sectionHeader = '<h4 class="qsection">'+q.section+'</h4>';
+    }
+    return sectionHeader + '<div class="qblock" data-qi="'+i+'"><div class="qtext"><span class="qnum">'+(displayNum||'')+'</span>'+q.q+'</div>'+inner+'</div>';
   }
 
   function play(){
-    if(!window.speechSynthesis){
-      played = true;
-      const submitBtn = document.getElementById('listeningSubmitBtn');
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit answers';
-      return;
-    }
     const t = LISTENING_TRACKS[idx];
     const waveBars = document.querySelectorAll('#listenWave span');
     let waveHandle = setInterval(()=>{
       waveBars.forEach(b=>{ b.classList.toggle('live', Math.random()>0.5); b.style.height=(6+Math.random()*20)+'px'; });
     },160);
-    Speech.speak(t.script, {
-      rate: 0.9,
-      onend: ()=>{
-        clearInterval(waveHandle);
-        waveBars.forEach(b=>b.classList.remove('live'));
-        const pill = document.getElementById('listenLivePill');
-        if(pill) pill.outerHTML = '<span class="runninglabel">Audio finished — it will not play again</span>';
-        played = true;
-        const submitBtn = document.getElementById('listeningSubmitBtn');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit answers';
-      }
-    });
+
+    function audioFinished(){
+      clearInterval(waveHandle);
+      waveBars.forEach(b=>b.classList.remove('live'));
+      const pill = document.getElementById('listenLivePill');
+      if(pill) pill.outerHTML = '<span class="runninglabel">Audio finished — it will not play again</span>';
+      played = true;
+      const submitBtn = document.getElementById('listeningSubmitBtn');
+      if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Submit answers'; }
+    }
+
+    if(t.audio){
+      const player = new Audio(t.audio);
+      player.addEventListener('ended', audioFinished, {once:true});
+      player.addEventListener('error', ()=>{
+        console.warn('Could not load', t.audio, '— falling back to speech synthesis.');
+        fallbackToSpeech();
+      }, {once:true});
+      player.play().catch(()=>{
+        console.warn('Playback was blocked — falling back to speech synthesis.');
+        fallbackToSpeech();
+      });
+    } else {
+      fallbackToSpeech();
+    }
+
+    function fallbackToSpeech(){
+      if(!window.speechSynthesis){ audioFinished(); return; }
+      Speech.speak(t.script, { rate: 0.9, onend: audioFinished });
+    }
   }
 
   function submit(){
@@ -1890,6 +1967,7 @@ const Listening = (function(){
     let score = 0;
     t.questions.forEach((q,i)=>{
       const block = document.querySelector('#listeningQuestions .qblock[data-qi="'+i+'"]');
+      if(q.skip) return; // static line, not a scored question
       let correct = false, userVal=null;
       if(q.type==='mcq'){
         const checked = block.querySelector('input:checked');
@@ -1898,7 +1976,8 @@ const Listening = (function(){
       } else {
         const inp = block.querySelector('input');
         userVal = inp.value.trim();
-        correct = userVal.toLowerCase() === String(q.answer).toLowerCase();
+        const accepted = [String(q.answer)].concat(q.alt || []).map(a=>a.toLowerCase().trim());
+        correct = accepted.includes(userVal.toLowerCase());
       }
       if(correct) score++;
       // Same rule as Reading.submit(): hide correctness during the exam.
@@ -1914,7 +1993,8 @@ const Listening = (function(){
       }
       block.querySelectorAll('input').forEach(inp=>inp.disabled=true);
     });
-    const pct = Math.round((score/t.questions.length)*100);
+    const scoredTotal = t.questions.filter(q=>!q.skip).length;
+    const pct = Math.round((score/scoredTotal)*100);
     let levelNote = '';
     if(App.examMode){
       // Exam performance never changes the saved practice difficulty.
@@ -1938,7 +2018,7 @@ const Listening = (function(){
         '<p class="hint" style="margin-top:6px;">Your score for this section will be revealed with the rest of your results once you finish and submit the full exam.</p></div>';
     } else {
       document.getElementById('listeningResult').innerHTML =
-        '<div class="card"><div class="resultbig"><span class="n">'+score+'</span><span>/ '+t.questions.length+' correct ('+pct+'%)</span></div>' +
+        '<div class="card"><div class="resultbig"><span class="n">'+score+'</span><span>/ '+scoredTotal+' correct ('+pct+'%)</span></div>' +
         '<p class="hint" style="margin-top:8px;">Informal practice score, not an official IELTS band.</p>' +
         (levelNote ? '<p class="hint" style="margin-top:4px;">'+levelNote+'</p>' : '') +
         '</div>';
@@ -2983,7 +3063,8 @@ function wirePracticeToggle(){
     await Profile.set('profile:practiceMode', App.practiceMode);
     document.querySelectorAll('.pmode-btn').forEach(b=> b.classList.toggle('active', b===btn));
     Reading.setLevel(App.practiceMode==='easy' ? 0 : 1);
-    Listening.setLevel(App.practiceMode==='easy' ? 0 : 1);
+    // Listening tracks are hand-authored, one per part — don't auto-jump
+    // when the practice difficulty changes, just leave the current pick.
     Writing.refresh();
     Spelling.refresh();
     showToast('Practice mode set to '+(App.practiceMode==='easy' ? 'Easy' : 'Standard')+'.');
